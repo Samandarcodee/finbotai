@@ -22,7 +22,7 @@ MESSAGES = {
         "settings": "⚙️ Sozlamalar\n\nTil: {lang}\nValyuta: {currency}\n\nQuyidagilardan birini tanlang:",
         "settings_menu": [
             ["🌐 Tilni o'zgartirish", "💰 Valyutani o'zgartirish"],
-            ["🔙 Orqaga", "🏠 Bosh menyu"]
+            ["🏠 Bosh menyu"]
         ],
         "choose_language": "🌐 Tilni tanlang:",
         "choose_currency": "💰 Valyutani tanlang:",
@@ -31,8 +31,40 @@ MESSAGES = {
         "back": "🔙 Orqaga",
         "main_menu": "🏠 Bosh menyu",
         "invalid_choice": "❌ Noto'g'ri tanlov. Qaytadan tanlang.",
-        "languages": ["O'zbek tili"],
+        "languages": ["O'zbek tili", "Русский язык", "English"],
         "currencies": ["🇺🇿 So'm", "💵 Dollar", "💶 Euro", "💷 Rubl"]
+    },
+    "ru": {
+        "settings": "⚙️ Настройки\n\nЯзык: {lang}\nВалюта: {currency}\n\nВыберите одну из опций:",
+        "settings_menu": [
+            ["🌐 Изменить язык", "💰 Изменить валюту"],
+            ["🏠 Главное меню"]
+        ],
+        "choose_language": "🌐 Выберите язык:",
+        "choose_currency": "💰 Выберите валюту:",
+        "language_changed": "✅ Язык успешно изменен: {lang}",
+        "currency_changed": "✅ Валюта успешно изменена: {currency}",
+        "back": "🔙 Назад",
+        "main_menu": "🏠 Главное меню",
+        "invalid_choice": "❌ Неверный выбор. Пожалуйста, выберите снова.",
+        "languages": ["O'zbek tili", "Русский язык", "English"],
+        "currencies": ["🇺🇿 Сум", "💵 Доллар", "💶 Евро", "💷 Рубль"]
+    },
+    "en": {
+        "settings": "⚙️ Settings\n\nLanguage: {lang}\nCurrency: {currency}\n\nPlease choose one:",
+        "settings_menu": [
+            ["🌐 Change language", "💰 Change currency"],
+            ["🏠 Main menu"]
+        ],
+        "choose_language": "🌐 Choose a language:",
+        "choose_currency": "💰 Choose a currency:",
+        "language_changed": "✅ Language changed successfully: {lang}",
+        "currency_changed": "✅ Currency changed successfully: {currency}",
+        "back": "🔙 Back",
+        "main_menu": "🏠 Main menu",
+        "invalid_choice": "❌ Invalid choice. Please select again.",
+        "languages": ["O'zbek tili", "Русский язык", "English"],
+        "currencies": ["🇺🇿 So'm", "💵 Dollar", "💶 Euro", "💷 Ruble"]
     },
 }
 
@@ -115,17 +147,20 @@ def get_user_settings(user_id):
 
 # ==== COMMANDS ====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message or not hasattr(update.message, 'from_user'):
+    if not update.message:
         return
-    
-    user_id = update.message.from_user.id
-    user_name = update.message.from_user.first_name or "Foydalanuvchi"
-    
+    from_user = getattr(update.message, 'from_user', None)
+    if not from_user or not hasattr(from_user, 'id'):
+        return
+    user_id = getattr(from_user, 'id', None)
+    user_name = getattr(from_user, 'first_name', 'Foydalanuvchi')
+    if user_id is None:
+        return
     # Initialize user settings
     get_user_settings(user_id)
     
     keyboard = [
-        ["💰 Kirim qo'shish", "💸 Chiqim qo'shish"],
+        ["�� Kirim qo'shish", "💸 Chiqim qo'shish"],
         ["📊 Balans", "📈 Tahlil"],
         ["📋 Kategoriyalar", "🎯 Byudjet"],
         ["📤 Export", "🏆 Rekorlar"],
@@ -175,7 +210,10 @@ async def handle_support_message(update: Update, context: ContextTypes.DEFAULT_T
 async def admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not hasattr(update.message, 'from_user') or not update.message.text:
         return
-    if update.message.from_user.id != ADMIN_ID:
+    from_user = getattr(update.message, 'from_user', None)
+    if not from_user or not hasattr(from_user, 'id'):
+        return
+    if from_user.id != ADMIN_ID:
         return
     text = update.message.text
     if text.startswith("/reply_"):
@@ -220,13 +258,13 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not hasattr(update.message, 'from_user'):
         return
     text = update.message.text
-    user_id = update.message.from_user.id
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     # Universal navigation
-    if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu"]:
+    if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main menu"]:
         return await start(update, context)
     
-    text = update.message.text
-    user_id = update.message.from_user.id
+    if user_id is None:
+        return ConversationHandler.END
 
     if text == "💰 Kirim qo'shish":
         categories_keyboard = [
@@ -261,31 +299,31 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return 3
 
     elif text == "📊 Balans":
-        await show_balance(update, user_id)
+        return await show_balance(update, user_id)
 
     elif text == "📈 Tahlil":
-        await show_analysis(update, user_id)
+        return await show_analysis(update, user_id)
 
     elif text == "🤖 AI maslahat":
-        await show_ai_advice(update, user_id)
+        return await show_ai_advice(update, user_id)
 
     elif text == "📊 AI Tahlil":
-        await show_ai_analysis(update, user_id)
+        return await show_ai_analysis(update, user_id)
 
     elif text == "💡 Motivatsiya":
         await show_motivation(update)
 
     elif text == "📋 Kategoriyalar":
-        await show_categories(update, user_id)
+        return await show_categories(update, user_id)
 
     elif text == "🎯 Byudjet":
-        await show_budget_status(update, user_id)
+        return await show_budget_status(update, user_id)
 
     elif text == "📤 Export":
-        await export_data(update, user_id)
+        return await export_data(update, user_id)
 
     elif text == "🏆 Rekorlar":
-        await show_records(update, user_id)
+        return await show_records(update, user_id)
 
     elif text == "⚙️ Sozlamalar":
         return await show_settings(update, user_id)
@@ -353,6 +391,14 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         await update.message.reply_text("🏠 Bosh menyuga qaytdingiz:", reply_markup=reply_markup)
+        return ConversationHandler.END
+
+    elif text == "🤖 AI maslahat" or text == "📊 AI Tahlil":
+        if update.message is not None:
+            await update.message.reply_text(
+                "🤖 AI funksiyasi tez orada ishga tushadi!\n"
+                "Yaqin kunlarda siz uchun aqlli moliyaviy maslahatlar va tahlillar tayyorlaymiz. Yangilanishlarni kuzatib boring! 🚀"
+            )
         return ConversationHandler.END
 
 # BALANS
@@ -464,10 +510,11 @@ async def show_analysis(update: Update, user_id: int):
         conn.close()
         
         if not transactions:
-            await update.message.reply_text(
-                "📈 TAHLIL\n\n"
-                "Hali tranzaksiyalar yo'q. Avval kirim yoki chiqim qo'shing!"
-            )
+            if update.message:
+                await update.message.reply_text(
+                    "📈 TAHLIL\n\n"
+                    "Hali tranzaksiyalar yo'q. Avval kirim yoki chiqim qo'shing!"
+                )
             return
         
         analysis_text = "📈 TAHLIL HISOBOTI\n\n"
@@ -498,7 +545,10 @@ async def add_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not hasattr(update.message, 'from_user') or not update.message.text:
         return ConversationHandler.END
     
-    user_id = update.message.from_user.id
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+    if user_id is None:
+        return ConversationHandler.END
+
     settings = get_user_settings(user_id)
     currency = settings['currency']
     text = update.message.text.strip()
@@ -514,7 +564,7 @@ async def add_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Extract note from text
     parts = text.split(" ", 1)
     note = parts[1] if len(parts) > 1 else "Kirim"
-    selected_category = context.user_data.get('selected_income_category', 'Boshqa kirim')
+    selected_category = context.user_data['selected_income_category'] if hasattr(context, 'user_data') and isinstance(context.user_data, dict) and 'selected_income_category' in context.user_data else 'Boshqa kirim'
     
     try:
         conn = sqlite3.connect(DB_PATH)
@@ -546,7 +596,9 @@ async def income_category_selected(update: Update, context: ContextTypes.DEFAULT
         return ConversationHandler.END
     
     text = update.message.text
-    user_id = update.message.from_user.id
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+    if user_id is None:
+        return ConversationHandler.END
     
     if text == "🔙 Orqaga":
         return await cancel(update, context)
@@ -589,7 +641,9 @@ async def expense_category_selected(update: Update, context: ContextTypes.DEFAUL
         return ConversationHandler.END
     
     text = update.message.text
-    user_id = update.message.from_user.id
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+    if user_id is None:
+        return ConversationHandler.END
     
     if text == "🔙 Orqaga":
         return await cancel(update, context)
@@ -634,11 +688,14 @@ async def add_expense(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not hasattr(update.message, 'from_user') or not update.message.text:
         return ConversationHandler.END
     
-    user_id = update.message.from_user.id
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+    if user_id is None:
+        return ConversationHandler.END
+
     settings = get_user_settings(user_id)
     currency = settings['currency']
     text = update.message.text.strip()
-    selected_category = context.user_data.get('selected_expense_category', 'Boshqa')
+    selected_category = context.user_data['selected_expense_category'] if hasattr(context, 'user_data') and isinstance(context.user_data, dict) and 'selected_expense_category' in context.user_data else 'Boshqa'
     
     if text.lower() in ['/cancel', 'bekor', 'cancel']:
         return await cancel(update, context)
@@ -695,10 +752,11 @@ async def show_categories(update: Update, user_id: int):
         conn.close()
         
         if not categories:
-            await update.message.reply_text(
-                "📋 KATEGORIYALAR\n\n"
-                "Hali kategoriyalar yo'q. Chiqimlar qo'shing!"
-            )
+            if update.message:
+                await update.message.reply_text(
+                    "📋 KATEGORIYALAR\n\n"
+                    "Hali kategoriyalar yo'q. Chiqimlar qo'shing!"
+                )
             return
         
         text = "📋 KATEGORIYALAR BO'YICHA XARAJAT:\n\n"
@@ -710,11 +768,13 @@ async def show_categories(update: Update, user_id: int):
             text += f"   💰 {format_currency(total, currency)} ({count} ta)\n"
             text += f"   📊 {percentage:.1f}% xarajat\n\n"
         
-        await update.message.reply_text(text)
+        if update.message:
+            await update.message.reply_text(text)
         
     except Exception as e:
         logger.error(f"Categories error: {e}")
-        await update.message.reply_text("❌ Kategoriyalarni ko'rishda xatolik.")
+        if update.message:
+            await update.message.reply_text("❌ Kategoriyalarni ko'rishda xatolik.")
 
 async def show_budget_status(update: Update, user_id: int):
     try:
@@ -731,13 +791,14 @@ async def show_budget_status(update: Update, user_id: int):
         budgets = dict(c.fetchall())
         
         if not budgets:
-            await update.message.reply_text(
-                "🎯 BYUDJET\n\n"
-                "Hali byudjet belgilanmagan.\n\n"
-                "Byudjet belgilash uchun:\n"
-                "/setbudget [kategoriya] [miqdor]\n"
-                "Masalan: /setbudget Oziq-ovqat 500000"
-            )
+            if update.message:
+                await update.message.reply_text(
+                    "🎯 BYUDJET\n\n"
+                    "Hali byudjet belgilanmagan.\n\n"
+                    "Byudjet belgilash uchun:\n"
+                    "/setbudget [kategoriya] [miqdor]\n"
+                    "Masalan: /setbudget Oziq-ovqat 500000"
+                )
             return
         
         # Get spending by category this month
@@ -769,11 +830,13 @@ async def show_budget_status(update: Update, user_id: int):
             text += f"   💸 Sarflangan: {format_currency(spent, currency)} ({percentage:.1f}%)\n"
             text += f"   💵 Qolgan: {format_currency(remaining, currency)}\n\n"
         
-        await update.message.reply_text(text)
+        if update.message:
+            await update.message.reply_text(text)
         
     except Exception as e:
         logger.error(f"Budget error: {e}")
-        await update.message.reply_text("❌ Byudjetni ko'rishda xatolik.")
+        if update.message:
+            await update.message.reply_text("❌ Byudjetni ko'rishda xatolik.")
 
 async def export_data(update: Update, user_id: int):
     try:
@@ -792,10 +855,11 @@ async def export_data(update: Update, user_id: int):
         conn.close()
         
         if not transactions:
-            await update.message.reply_text(
-                "📤 EXPORT\n\n"
-                "Export qilish uchun ma'lumot yo'q."
-            )
+            if update.message:
+                await update.message.reply_text(
+                    "📤 EXPORT\n\n"
+                    "Export qilish uchun ma'lumot yo'q."
+                )
             return
         
         export_text = "📤 EXPORT MA'LUMOTLARI (Oxirgi 50 ta):\n\n"
@@ -807,11 +871,13 @@ async def export_data(update: Update, user_id: int):
             date_str = datetime.fromisoformat(t[4].replace('Z', '+00:00')).strftime("%d.%m.%Y")
             export_text += f"{date_str} | {t_type} | {format_currency(t[1], currency)} | {t[3]} | {t[2]}\n"
         
-        await update.message.reply_text(export_text)
+        if update.message:
+            await update.message.reply_text(export_text)
         
     except Exception as e:
         logger.error(f"Export error: {e}")
-        await update.message.reply_text("❌ Export qilishda xatolik.")
+        if update.message:
+            await update.message.reply_text("❌ Export qilishda xatolik.")
 
 async def show_records(update: Update, user_id: int):
     try:
@@ -872,11 +938,13 @@ async def show_records(update: Update, user_id: int):
         text += f"📊 Jami tranzaksiyalar: {total_transactions} ta\n"
         text += f"📈 O'rtacha oylik xarajat: {format_currency(int(avg_monthly), currency)}"
         
-        await update.message.reply_text(text)
+        if update.message:
+            await update.message.reply_text(text)
         
     except Exception as e:
         logger.error(f"Records error: {e}")
-        await update.message.reply_text("❌ Rekordlarni ko'rishda xatolik.")
+        if update.message:
+            await update.message.reply_text("❌ Rekordlarni ko'rishda xatolik.")
 
 async def show_ai_analysis(update: Update, user_id: int):
     """Show AI-powered spending analysis"""
@@ -894,11 +962,12 @@ async def show_ai_analysis(update: Update, user_id: int):
         transactions = c.fetchall()
         conn.close()
         if not transactions:
-            await update.message.reply_text(
-                "📊 AI Tahlil\n\n"
-                "Tahlil qilish uchun tranzaksiyalar yo'q. "
-                "Avval kirim yoki chiqim qo'shing!"
-            )
+            if update.message:
+                await update.message.reply_text(
+                    "📊 AI Tahlil\n\n"
+                    "Tahlil qilish uchun tranzaksiyalar yo'q. "
+                    "Avval kirim yoki chiqim qo'shing!"
+                )
             return
         # Tranzaksiyalarni AI uchun formatlash
         formatted_transactions = []
@@ -913,14 +982,17 @@ async def show_ai_analysis(update: Update, user_id: int):
         # AI tahlil olish (sinxron chaqiruv)
         try:
             analysis = ai_service.analyze_spending_patterns(formatted_transactions)
-            await update.message.reply_text(analysis)
+            if update.message:
+                await update.message.reply_text(analysis)
         except Exception as e:
-            await update.message.reply_text(f"AI tahlil xatosi: {e}")
+            if update.message:
+                await update.message.reply_text(f"AI tahlil xatosi: {e}")
     except Exception as e:
         logger.error(f"AI analysis error: {e}")
-        await update.message.reply_text(
-            f"❌ AI tahlil xatosi. {e}"
-        )
+        if update.message:
+            await update.message.reply_text(
+                f"❌ AI tahlil xatosi. {e}"
+            )
 
 async def show_ai_advice(update: Update, user_id: int):
     """Show AI financial advice based on user data"""
@@ -973,12 +1045,15 @@ async def show_ai_advice(update: Update, user_id: int):
         # AI maslahat olish (sinxron chaqiruv)
         try:
             advice = ai_service.get_financial_advice(user_data)
-            await update.message.reply_text(advice)
+            if update.message:
+                await update.message.reply_text(advice)
         except Exception as e:
-            await update.message.reply_text(f"AI maslahat xatosi: {e}")
+            if update.message:
+                await update.message.reply_text(f"AI maslahat xatosi: {e}")
     except Exception as e:
         logger.error(f"AI advice error: {e}")
-        await update.message.reply_text(ai_service.get_default_advice())
+        if update.message:
+            await update.message.reply_text(ai_service.get_default_advice())
 
 async def show_motivation(update: Update):
     """Show motivational messages"""
@@ -1005,7 +1080,8 @@ async def show_motivation(update: Update):
     ]
     
     motivation = random.choice(motivations)
-    await update.message.reply_text(motivation)
+    if update.message:
+        await update.message.reply_text(motivation)
 
 # Robust fallback for settings
 async def show_settings(update: Update, user_id: int):
@@ -1016,10 +1092,11 @@ async def show_settings(update: Update, user_id: int):
     reply_markup = ReplyKeyboardMarkup(
         MESSAGES[lang]["settings_menu"], resize_keyboard=True, one_time_keyboard=True
     )
-    await update.message.reply_text(
-        MESSAGES[lang]["settings"].format(lang=lang, currency=currency),
-        reply_markup=reply_markup
-    )
+    if update.message:
+        await update.message.reply_text(
+            MESSAGES[lang]["settings"].format(lang=lang, currency=currency),
+            reply_markup=reply_markup
+        )
     return 5
 
 async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1028,30 +1105,24 @@ async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     lang = get_user_settings(user_id)['language']
-    if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu"]:
-        await start(update, context)
-        return ConversationHandler.END
+    if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main menu"]:
+        return await start(update, context)
     elif text == MESSAGES[lang]["main_menu"]:
-        await start(update, context)
-        return ConversationHandler.END
+        return await start(update, context)
     elif text == MESSAGES[lang]["back"]:
+        if user_id is None:
+            return ConversationHandler.END
         return await show_settings(update, user_id)
-    elif text == "🌐 Tilni o'zgartirish":
-        # If only one language, show info message
-        if len(MESSAGES[lang]["languages"]) <= 1:
-            await update.message.reply_text(
-                "🌐 TILNI O'ZGARTIRISH\n\nHozircha faqat O'zbek tili mavjud. Kelajakda boshqa tillar qo'shiladi! 🇺🇿"
-            )
-            return await show_settings(update, user_id)
+    elif text in ["🌐 Tilni o'zgartirish", "🌐 Изменить язык", "🌐 Change language"]:
         reply_markup = ReplyKeyboardMarkup(
-            [[l] for l in MESSAGES[lang]["languages"]] + [[MESSAGES[lang]["back"]], [MESSAGES[lang]["main_menu"]]],
+            [[l] for l in MESSAGES[lang]["languages"]],
             resize_keyboard=True, one_time_keyboard=True
         )
         await update.message.reply_text(MESSAGES[lang]["choose_language"], reply_markup=reply_markup)
         return 8
-    elif text == "💰 Valyutani o'zgartirish":
+    elif text in ["💰 Valyutani o'zgartirish", "💰 Изменить валюту", "💰 Change currency"]:
         reply_markup = ReplyKeyboardMarkup(
-            [[c] for c in MESSAGES[lang]["currencies"]] + [[MESSAGES[lang]["back"]], [MESSAGES[lang]["main_menu"]]],
+            [[c] for c in MESSAGES[lang]["currencies"]] + [[MESSAGES[lang]["main_menu"]]],
             resize_keyboard=True, one_time_keyboard=True
         )
         await update.message.reply_text(MESSAGES[lang]["choose_currency"], reply_markup=reply_markup)
@@ -1066,25 +1137,29 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
     text = update.message.text
     user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     lang = get_user_settings(user_id)['language']
-    if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu"]:
-        await start(update, context)
-        return ConversationHandler.END
+    language_map = {
+        "O'zbek tili": "uz",
+        "Русский язык": "ru",
+        "English": "en"
+    }
+    if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main menu"]:
+        return await start(update, context)
     elif text == MESSAGES[lang]["main_menu"]:
-        await start(update, context)
-        return ConversationHandler.END
-    elif text == MESSAGES[lang]["back"]:
-        return await show_settings(update, user_id)
-    elif text in MESSAGES[lang]["languages"]:
+        return await start(update, context)
+    elif text in language_map:
+        new_lang = language_map[text]
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
-        c.execute("UPDATE user_settings SET language = ? WHERE user_id = ?", ("uz", user_id))
+        c.execute("UPDATE user_settings SET language = ? WHERE user_id = ?", (new_lang, user_id))
         conn.commit()
         conn.close()
-        await update.message.reply_text(MESSAGES[lang]["language_changed"].format(lang=text))
+        await update.message.reply_text(MESSAGES[new_lang]["language_changed"].format(lang=text))
+        if user_id is None:
+            return ConversationHandler.END
         return await show_settings(update, user_id)
     else:
         reply_markup = ReplyKeyboardMarkup(
-            [[l] for l in MESSAGES[lang]["languages"]] + [[MESSAGES[lang]["back"]], [MESSAGES[lang]["main_menu"]]],
+            [[l] for l in MESSAGES[lang]["languages"]],
             resize_keyboard=True, one_time_keyboard=True
         )
         await update.message.reply_text(MESSAGES[lang]["invalid_choice"], reply_markup=reply_markup)
@@ -1102,13 +1177,13 @@ async def currency_selection_handler(update: Update, context: ContextTypes.DEFAU
         "💶 Euro": "EUR",
         "💷 Rubl": "RUB"
     }
-    if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu"]:
-        await start(update, context)
-        return ConversationHandler.END
+    if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main menu"]:
+        return await start(update, context)
     elif text == MESSAGES[lang]["main_menu"]:
-        await start(update, context)
-        return ConversationHandler.END
+        return await start(update, context)
     elif text == MESSAGES[lang]["back"]:
+        if user_id is None:
+            return ConversationHandler.END
         return await show_settings(update, user_id)
     elif text in currency_map:
         conn = sqlite3.connect(DB_PATH)
@@ -1117,6 +1192,8 @@ async def currency_selection_handler(update: Update, context: ContextTypes.DEFAU
         conn.commit()
         conn.close()
         await update.message.reply_text(MESSAGES[lang]["currency_changed"].format(currency=text))
+        if user_id is None:
+            return ConversationHandler.END
         return await show_settings(update, user_id)
     else:
         reply_markup = ReplyKeyboardMarkup(
@@ -1133,7 +1210,9 @@ async def delete_data_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not update.message or not hasattr(update.message, 'from_user'):
         return ConversationHandler.END
     text = update.message.text
-    user_id = update.message.from_user.id
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+    if user_id is None:
+        return ConversationHandler.END
     if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu"]:
         return await start(update, context)
     elif text == "✅ Ha, o'chirish":
