@@ -16,11 +16,23 @@ DB_PATH = "finbot.db"
 ADMIN_ID = 786171158  # Sizning Telegram ID'ingiz
 ASK_SUPPORT = 100  # yangi state
 
-# ==== MESSAGES ====
+# ==== MESSAGES (to'liq sozlamalar uchun) ====
 MESSAGES = {
     "uz": {
-        "settings": "⚙️ Sozlamalar\n\nTil: {lang}\nValyuta: {currency}",
+        "settings": "⚙️ Sozlamalar\n\nTil: {lang}\nValyuta: {currency}\n\nQuyidagilardan birini tanlang:",
+        "settings_menu": [
+            ["🌐 Tilni o'zgartirish", "💰 Valyutani o'zgartirish"],
+            ["🔙 Orqaga", "🏠 Bosh menyu"]
+        ],
+        "choose_language": "🌐 Tilni tanlang:",
+        "choose_currency": "💰 Valyutani tanlang:",
+        "language_changed": "✅ Til muvaffaqiyatli o'zgartirildi: {lang}",
+        "currency_changed": "✅ Valyuta muvaffaqiyatli o'zgartirildi: {currency}",
+        "back": "🔙 Orqaga",
+        "main_menu": "🏠 Bosh menyu",
+        "invalid_choice": "❌ Noto'g'ri tanlov. Qaytadan tanlang.",
         "languages": ["O'zbek tili"],
+        "currencies": ["🇺🇿 So'm", "💵 Dollar", "💶 Euro", "💷 Rubl"]
     },
 }
 
@@ -970,51 +982,94 @@ async def show_motivation(update: Update):
 
 # Robust fallback for settings
 async def show_settings(update: Update, user_id: int):
-    """Show user settings"""
+    """Show user settings with full menu and handle navigation"""
     settings = get_user_settings(user_id)
     lang = settings['language']
+    currency = settings['currency']
     reply_markup = ReplyKeyboardMarkup(
-        [[l] for l in MESSAGES[lang]["languages"]],
-        resize_keyboard=True, one_time_keyboard=True
+        MESSAGES[lang]["settings_menu"], resize_keyboard=True, one_time_keyboard=True
     )
     await update.message.reply_text(
-        MESSAGES[lang]["settings"].format(lang=lang, currency=settings['currency']),
+        MESSAGES[lang]["settings"].format(lang=lang, currency=currency),
         reply_markup=reply_markup
     )
     return 5
 
-async def currency_selection_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle currency selection"""
+async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle settings menu navigation and actions"""
     if not update.message or not update.message.text:
         return ConversationHandler.END
-    
     text = update.message.text
     user_id = update.message.from_user.id
-    
+    lang = get_user_settings(user_id)['language']
+
+    if text == "🌐 Tilni o'zgartirish":
+        reply_markup = ReplyKeyboardMarkup(
+            [[l] for l in MESSAGES[lang]["languages"]] + [[MESSAGES[lang]["back"]]],
+            resize_keyboard=True, one_time_keyboard=True
+        )
+        await update.message.reply_text(MESSAGES[lang]["choose_language"], reply_markup=reply_markup)
+        return 8
+    elif text == "💰 Valyutani o'zgartirish":
+        reply_markup = ReplyKeyboardMarkup(
+            [[c] for c in MESSAGES[lang]["currencies"]] + [[MESSAGES[lang]["back"]]],
+            resize_keyboard=True, one_time_keyboard=True
+        )
+        await update.message.reply_text(MESSAGES[lang]["choose_currency"], reply_markup=reply_markup)
+        return 9
+    elif text == MESSAGES[lang]["back"]:
+        return await show_settings(update, user_id)
+    elif text == MESSAGES[lang]["main_menu"]:
+        return await start(update, context)
+    else:
+        await update.message.reply_text(MESSAGES[lang]["invalid_choice"])
+        return 5
+
+async def language_selection_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return ConversationHandler.END
+    text = update.message.text
+    user_id = update.message.from_user.id
+    lang = get_user_settings(user_id)['language']
+    if text in MESSAGES[lang]["languages"]:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("UPDATE user_settings SET language = ? WHERE user_id = ?", ("uz", user_id))
+        conn.commit()
+        conn.close()
+        await update.message.reply_text(MESSAGES[lang]["language_changed"].format(lang=text))
+        return await show_settings(update, user_id)
+    elif text == MESSAGES[lang]["back"]:
+        return await show_settings(update, user_id)
+    else:
+        await update.message.reply_text(MESSAGES[lang]["invalid_choice"])
+        return 8
+
+async def currency_selection_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return ConversationHandler.END
+    text = update.message.text
+    user_id = update.message.from_user.id
+    lang = get_user_settings(user_id)['language']
     currency_map = {
         "🇺🇿 So'm": "so'm",
         "💵 Dollar": "USD",
-        "💶 Euro": "EUR", 
+        "💶 Euro": "EUR",
         "💷 Rubl": "RUB"
     }
-    
     if text in currency_map:
-        # Update user currency setting
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("UPDATE user_settings SET currency = ? WHERE user_id = ?", (currency_map[text], user_id))
         conn.commit()
         conn.close()
-        
-        await update.message.reply_text(f"✅ Valyuta muvaffaqiyatli o'zgartirildi: {text}")
+        await update.message.reply_text(MESSAGES[lang]["currency_changed"].format(currency=text))
         return await show_settings(update, user_id)
-    
-    elif text == "🔙 Orqaga":
+    elif text == MESSAGES[lang]["back"]:
         return await show_settings(update, user_id)
-    
     else:
-        await update.message.reply_text("❌ Noto'g'ri valyuta tanlandi. Qaytadan tanlang.")
-        return 6
+        await update.message.reply_text(MESSAGES[lang]["invalid_choice"])
+        return 9
 
 async def delete_data_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle data deletion confirmation"""
@@ -1073,9 +1128,11 @@ def main():
             2: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_expense)],
             3: [MessageHandler(filters.TEXT & ~filters.COMMAND, expense_category_selected)],
             4: [MessageHandler(filters.TEXT & ~filters.COMMAND, income_category_selected)],
-            5: [MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler)],
+            5: [MessageHandler(filters.TEXT & ~filters.COMMAND, settings_handler)], # New state for settings
             6: [MessageHandler(filters.TEXT & ~filters.COMMAND, currency_selection_handler)],
             7: [MessageHandler(filters.TEXT & ~filters.COMMAND, delete_data_handler)],
+            8: [MessageHandler(filters.TEXT & ~filters.COMMAND, language_selection_handler)], # New state for language selection
+            9: [MessageHandler(filters.TEXT & ~filters.COMMAND, currency_selection_handler)], # New state for currency selection
         },
         fallbacks=[CommandHandler("start", start), CommandHandler("cancel", cancel)]
     )
