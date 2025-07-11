@@ -7,9 +7,11 @@ HEADERS = {"Authorization": f"Bearer {HUGGINGFACE_API_TOKEN}"}
 
 class ai_service:
     @staticmethod
-    async def get_financial_advice(user_data):
+    def get_financial_advice(user_data):
         prompt = f"User data: {user_data}. Give financial advice in Uzbek."
         response = requests.post(API_URL, headers=HEADERS, json={"inputs": prompt})
+        print("Status code:", response.status_code)
+        print("Response:", response.text)
         if response.status_code == 200:
             result = response.json()
             if isinstance(result, list) and "generated_text" in result[0]:
@@ -19,12 +21,14 @@ class ai_service:
             else:
                 return "AI maslahatini olishda xatolik."
         else:
-            return "AI xizmatida xatolik. Keyinroq urinib ko‘ring."
+            return f"AI xizmatida xatolik. Status: {response.status_code}, Javob: {response.text}"
 
     @staticmethod
-    async def analyze_spending_patterns(transactions):
+    def analyze_spending_patterns(transactions):
         prompt = f"Analyze these transactions and give a summary in Uzbek: {transactions}"
         response = requests.post(API_URL, headers=HEADERS, json={"inputs": prompt})
+        print("Status code:", response.status_code)
+        print("Response:", response.text)
         if response.status_code == 200:
             result = response.json()
             if isinstance(result, list) and "generated_text" in result[0]:
@@ -34,7 +38,7 @@ class ai_service:
             else:
                 return "AI tahlilini olishda xatolik."
         else:
-            return "AI xizmatida xatolik. Keyinroq urinib ko‘ring."
+            return f"AI xizmatida xatolik. Status: {response.status_code}, Javob: {response.text}"
 
     @staticmethod
     def get_default_advice():
