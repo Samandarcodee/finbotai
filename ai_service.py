@@ -31,14 +31,17 @@ class AIService:
         income = user_data.get('income', 0)
         expenses = user_data.get('expenses', 0)
         categories = user_data.get('categories', [])
-        
+
+        empty_text = "Ma'lumot yo'q"
+        categories_str = ', '.join(categories) if categories else empty_text
+
         prompt = f"""Siz O'zbekistonda yashovchi foydalanuvchiga moliyaviy maslahat beruvchi AI yordamchisiz.
 
 Foydalanuvchi ma'lumotlari:
 - Balans: {balance} so'm
 - Oylik kirim: {income} so'm  
 - Oylik chiqim: {expenses} so'm
-- Eng ko'p xarajat qilgan kategoriyalar: {', '.join(categories) if categories else 'Ma\'lumot yo\'q'}
+- Eng ko'p xarajat qilgan kategoriyalar: {categories_str}
 
 O'zbek tilida qisqa va foydali moliyaviy maslahat bering. Maslahat:
 1. 2-3 jumladan iborat bo'lsin
