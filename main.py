@@ -19,52 +19,40 @@ ASK_SUPPORT = 100  # yangi state
 # ==== MESSAGES (to'liq sozlamalar uchun) ====
 MESSAGES = {
     "uz": {
-        "settings": "⚙️ Sozlamalar\n\nTil: {lang}\nValyuta: {currency}\n\nQuyidagilardan birini tanlang:",
+        "settings": "⚙️ Sozlamalar\n\nValyuta: {currency}\n\nQuyidagilardan birini tanlang:",
         "settings_menu": [
             ["💰 Valyutani o'zgartirish"],
             ["🏠 Bosh menyu"]
         ],
-        "choose_language": "🌐 Tilni tanlang:",
         "choose_currency": "💰 Valyutani tanlang:",
-        "language_changed": "✅ Til muvaffaqiyatli o'zgartirildi: {lang}",
         "currency_changed": "✅ Valyuta muvaffaqiyatli o'zgartirildi: {currency}",
-        "back": "🔙 Orqaga",
         "main_menu": "🏠 Bosh menyu",
         "invalid_choice": "❌ Noto'g'ri tanlov. Qaytadan tanlang.",
-        "languages": ["O'zbek tili", "Русский язык", "English"],
         "currencies": ["🇺🇿 So'm", "💵 Dollar", "💶 Euro", "💷 Rubl"]
     },
     "ru": {
-        "settings": "⚙️ Настройки\n\nЯзык: {lang}\nВалюта: {currency}\n\nВыберите одну из опций:",
+        "settings": "⚙️ Настройки\n\nВалюта: {currency}\n\nВыберите одну из опций:",
         "settings_menu": [
             ["💰 Изменить валюту"],
             ["🏠 Главное меню"]
         ],
-        "choose_language": "🌐 Выберите язык:",
         "choose_currency": "💰 Выберите валюту:",
-        "language_changed": "✅ Язык успешно изменен: {lang}",
         "currency_changed": "✅ Валюта успешно изменена: {currency}",
-        "back": "🔙 Назад",
         "main_menu": "🏠 Главное меню",
         "invalid_choice": "❌ Неверный выбор. Пожалуйста, выберите снова.",
-        "languages": ["O'zbek tili", "Русский язык", "English"],
         "currencies": ["🇺🇿 Сум", "💵 Доллар", "💶 Евро", "💷 Рубль"]
     },
     "en": {
-        "settings": "⚙️ Settings\n\nLanguage: {lang}\nCurrency: {currency}\n\nPlease choose one:",
+        "settings": "⚙️ Settings\n\nCurrency: {currency}\n\nPlease choose one:",
         "settings_menu": [
             ["💰 Change currency"],
             ["🏠 Main menu"]
         ],
-        "choose_language": "🌐 Choose a language:",
         "choose_currency": "💰 Choose a currency:",
-        "language_changed": "✅ Language changed successfully: {lang}",
         "currency_changed": "✅ Currency changed successfully: {currency}",
-        "back": "🔙 Back",
         "main_menu": "🏠 Main menu",
         "invalid_choice": "❌ Invalid choice. Please select again.",
-        "languages": ["O'zbek tili", "Русский язык", "English"],
-        "currencies": ["🇺🇿 So'm", "💵 Dollar", "💶 Euro", "💷 Ruble"]
+        "currencies": ["🇺🇿 So'm", "💵 Dollar", "💶 Euro", "�� Ruble"]
     },
 }
 
@@ -1073,14 +1061,14 @@ async def show_motivation(update: Update):
 async def show_settings(update: Update, user_id: int):
     """Show user settings with full menu and handle navigation"""
     settings = get_user_settings(user_id)
-    lang = settings['language']
-    currency = settings['currency']
+    lang = settings.get('language', 'uz')
+    currency = settings.get('currency', "so'm")
     reply_markup = ReplyKeyboardMarkup(
         MESSAGES[lang]["settings_menu"], resize_keyboard=True, one_time_keyboard=True
     )
     if update.message:
         await update.message.reply_text(
-            MESSAGES[lang]["settings"].format(lang=lang, currency=currency),
+            MESSAGES[lang]["settings"].format(currency=currency),
             reply_markup=reply_markup
         )
     return 5
@@ -1095,10 +1083,6 @@ async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await start(update, context)
     elif text == MESSAGES[lang]["main_menu"]:
         return await start(update, context)
-    elif text == MESSAGES[lang]["back"]:
-        if user_id is None:
-            return ConversationHandler.END
-        return await show_settings(update, user_id)
     elif text in ["💰 Valyutani o'zgartirish", "💰 Изменить валюту", "💰 Change currency"]:
         reply_markup = ReplyKeyboardMarkup(
             [[c] for c in MESSAGES[lang]["currencies"]] + [[MESSAGES[lang]["main_menu"]]],
@@ -1115,21 +1099,27 @@ async def currency_selection_handler(update: Update, context: ContextTypes.DEFAU
         return ConversationHandler.END
     text = update.message.text
     user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+    if user_id is None:
+        return ConversationHandler.END
     lang = get_user_settings(user_id)['language']
     currency_map = {
         "🇺🇿 So'm": "so'm",
         "💵 Dollar": "USD",
         "💶 Euro": "EUR",
-        "💷 Rubl": "RUB"
+        "💷 Rubl": "RUB",
+        "🇺🇿 Сум": "so'm",
+        "💵 Доллар": "USD",
+        "💶 Евро": "EUR",
+        "💷 Рубль": "RUB",
+        "🇺🇿 So'm": "so'm",
+        "💵 Dollar": "USD",
+        "💶 Euro": "EUR",
+        "💷 Ruble": "RUB"
     }
     if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main menu"]:
         return await start(update, context)
     elif text == MESSAGES[lang]["main_menu"]:
         return await start(update, context)
-    elif text == MESSAGES[lang]["back"]:
-        if user_id is None:
-            return ConversationHandler.END
-        return await show_settings(update, user_id)
     elif text in currency_map:
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
@@ -1137,12 +1127,10 @@ async def currency_selection_handler(update: Update, context: ContextTypes.DEFAU
         conn.commit()
         conn.close()
         await update.message.reply_text(MESSAGES[lang]["currency_changed"].format(currency=text))
-        if user_id is None:
-            return ConversationHandler.END
         return await show_settings(update, user_id)
     else:
         reply_markup = ReplyKeyboardMarkup(
-            [[c] for c in MESSAGES[lang]["currencies"]] + [[MESSAGES[lang]["back"]], [MESSAGES[lang]["main_menu"]]],
+            [[c] for c in MESSAGES[lang]["currencies"]] + [[MESSAGES[lang]["main_menu"]]],
             resize_keyboard=True, one_time_keyboard=True
         )
         await update.message.reply_text(MESSAGES[lang]["invalid_choice"], reply_markup=reply_markup)
