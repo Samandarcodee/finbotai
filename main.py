@@ -12,6 +12,18 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DB_PATH = "finbot.db"
 
+# ==== CONSTANTS ====
+ADMIN_ID = 786171158  # Sizning Telegram ID'ingiz
+ASK_SUPPORT = 100  # yangi state
+
+# ==== MESSAGES ====
+MESSAGES = {
+    "uz": {
+        "settings": "⚙️ Sozlamalar\n\nTil: {lang}\nValyuta: {currency}",
+        "languages": ["O'zbek tili"],
+    },
+}
+
 # ==== LOGGING ====
 logging.basicConfig(
     level=logging.INFO,
@@ -960,14 +972,15 @@ async def show_motivation(update: Update):
 async def show_settings(update: Update, user_id: int):
     """Show user settings"""
     settings = get_user_settings(user_id)
-    settings_keyboard = [
-        ["🌐 Tilni o'zgartirish", "💰 Valyutani o'zgartirish"],
-        ["🔔 Bildirishnomalar", "📊 Hisobot turi"],
-        ["🗑️ Ma'lumotlarni o'chirish", "🔙 Orqaga"]
-    ]
-    reply_markup = ReplyKeyboardMarkup(settings_keyboard, resize_keyboard=True, one_time_keyboard=True)
-    settings_text = f"""⚙️ SOZLAMALAR\n\n🌐 Til: {settings['language']}\n💰 Valyuta: {settings['currency']}\n\nQuyidagi sozlamalarni o'zgartirish mumkin:"""
-    await update.message.reply_text(settings_text, reply_markup=reply_markup)
+    lang = settings['language']
+    reply_markup = ReplyKeyboardMarkup(
+        [[l] for l in MESSAGES[lang]["languages"]],
+        resize_keyboard=True, one_time_keyboard=True
+    )
+    await update.message.reply_text(
+        MESSAGES[lang]["settings"].format(lang=lang, currency=settings['currency']),
+        reply_markup=reply_markup
+    )
     return 5
 
 async def currency_selection_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1041,9 +1054,6 @@ def main():
     
     init_db()
     app = ApplicationBuilder().token(BOT_TOKEN).build()
-
-    ADMIN_ID = 786171158  # Sizning Telegram ID'ingiz
-    ASK_SUPPORT = 100  # yangi state
 
     yangi_conv_handler = ConversationHandler(
         entry_points=[
