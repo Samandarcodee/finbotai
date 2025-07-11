@@ -998,9 +998,7 @@ async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     lang = get_user_settings(user_id)['language']
-    if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main menu"]:
-        return await start(update, context)
-    elif text == MESSAGES[lang]["main_menu"]:
+    if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main menu"] or text == MESSAGES[lang]["main_menu"]:
         return await start(update, context)
     elif text in ["💰 Valyutani o'zgartirish", "💰 Изменить валюту", "💰 Change currency"]:
         reply_markup = ReplyKeyboardMarkup(
@@ -1035,9 +1033,7 @@ async def currency_selection_handler(update: Update, context: ContextTypes.DEFAU
         "💶 Euro": "EUR",
         "💷 Ruble": "RUB"
     }
-    if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main menu"]:
-        return await start(update, context)
-    elif text == MESSAGES[lang]["main_menu"]:
+    if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main menu"] or text == MESSAGES[lang]["main_menu"]:
         return await start(update, context)
     elif text in currency_map:
         conn = sqlite3.connect(DB_PATH)
