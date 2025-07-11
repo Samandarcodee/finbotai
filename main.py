@@ -159,7 +159,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     
     keyboard = [
-        ["�� Kirim qo'shish", "💸 Chiqim qo'shish"],
+        ["💰 Kirim qo'shish", "💸 Chiqim qo'shish"],
         ["📊 Balans", "📈 Tahlil"],
         ["📋 Kategoriyalar", "🎯 Byudjet"],
         ["📤 Export", "🏆 Rekorlar"],
@@ -825,7 +825,6 @@ async def show_ai_analysis(update: Update, user_id: int):
         # Foydalanuvchi tranzaksiyalarini olish
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
-        
         c.execute("""
             SELECT type, amount, category, note, date 
             FROM transactions 
@@ -835,7 +834,6 @@ async def show_ai_analysis(update: Update, user_id: int):
         """, (user_id,))
         transactions = c.fetchall()
         conn.close()
-        
         if not transactions:
             await update.message.reply_text(
                 "📊 AI Tahlil\n\n"
@@ -843,7 +841,6 @@ async def show_ai_analysis(update: Update, user_id: int):
                 "Avval kirim yoki chiqim qo'shing!"
             )
             return
-        
         # Tranzaksiyalarni AI uchun formatlash
         formatted_transactions = []
         for t in transactions:
@@ -854,16 +851,16 @@ async def show_ai_analysis(update: Update, user_id: int):
                 'note': t[3],
                 'date': t[4]
             })
-        
-        # AI tahlil olish
-        analysis = await ai_service.analyze_spending_patterns(formatted_transactions)
-        
-        await update.message.reply_text(analysis)
-        
+        # AI tahlil olish (sinxron chaqiruv)
+        try:
+            analysis = ai_service.analyze_spending_patterns(formatted_transactions)
+            await update.message.reply_text(analysis)
+        except Exception as e:
+            await update.message.reply_text(f"AI tahlil xatosi: {e}")
     except Exception as e:
         logger.error(f"AI analysis error: {e}")
         await update.message.reply_text(
-            "❌ AI tahlil xatosi. Qaytadan urinib ko'ring."
+            f"❌ AI tahlil xatosi. {e}"
         )
 
 async def show_ai_advice(update: Update, user_id: int):
@@ -872,7 +869,6 @@ async def show_ai_advice(update: Update, user_id: int):
         # Foydalanuvchi ma'lumotlarini olish
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
-        
         # Joriy oy ma'lumotlari
         current_month = datetime.now().strftime("%Y-%m")
         c.execute("""
@@ -883,7 +879,6 @@ async def show_ai_advice(update: Update, user_id: int):
             WHERE user_id = ? AND strftime('%Y-%m', date) = ?
         """, (user_id, current_month))
         month_data = c.fetchone()
-        
         # Jami balans
         c.execute("""
             SELECT 
@@ -893,7 +888,6 @@ async def show_ai_advice(update: Update, user_id: int):
             WHERE user_id = ?
         """, (user_id,))
         total_data = c.fetchone()
-        
         # Eng ko'p xarajat qilgan kategoriyalar
         c.execute("""
             SELECT category, SUM(amount) 
@@ -904,31 +898,27 @@ async def show_ai_advice(update: Update, user_id: int):
             LIMIT 3
         """, (user_id,))
         categories = [cat[0] for cat in c.fetchall()]
-        
         conn.close()
-        
         # Ma'lumotlarni tayyorlash
         month_income = month_data[0] or 0
         month_expense = month_data[1] or 0
         total_income = total_data[0] or 0
         total_expense = total_data[1] or 0
         balance = total_income - total_expense
-        
         user_data = {
             'balance': balance,
             'income': month_income,
             'expenses': month_expense,
             'categories': categories
         }
-        
-        # AI maslahat olish
-        advice = await ai_service.get_financial_advice(user_data)
-        
-        await update.message.reply_text(advice)
-        
+        # AI maslahat olish (sinxron chaqiruv)
+        try:
+            advice = ai_service.get_financial_advice(user_data)
+            await update.message.reply_text(advice)
+        except Exception as e:
+            await update.message.reply_text(f"AI maslahat xatosi: {e}")
     except Exception as e:
         logger.error(f"AI advice error: {e}")
-        # Xatolik bo'lsa standart maslahat
         await update.message.reply_text(ai_service.get_default_advice())
 
 async def show_motivation(update: Update):
