@@ -19,12 +19,15 @@ class ai_service:
             elif isinstance(result, dict) and "generated_text" in result:
                 return result["generated_text"]
             else:
-                return "AI maslahatini olishda xatolik."
+                return f"AI maslahatini olishda xatolik. To'liq javob: {response.text}"
         else:
             return f"AI xizmatida xatolik. Status: {response.status_code}, Javob: {response.text}"
 
     @staticmethod
     def analyze_spending_patterns(transactions):
+        # Prompt hajmini cheklash: faqat oxirgi 10 ta tranzaksiya
+        if isinstance(transactions, list) and len(transactions) > 10:
+            transactions = transactions[:10]
         prompt = f"Analyze these transactions and give a summary in Uzbek: {transactions}"
         response = requests.post(API_URL, headers=HEADERS, json={"inputs": prompt})
         print("Status code:", response.status_code)
@@ -36,7 +39,7 @@ class ai_service:
             elif isinstance(result, dict) and "generated_text" in result:
                 return result["generated_text"]
             else:
-                return "AI tahlilini olishda xatolik."
+                return f"AI tahlilini olishda xatolik. To'liq javob: {response.text}"
         else:
             return f"AI xizmatida xatolik. Status: {response.status_code}, Javob: {response.text}"
 
