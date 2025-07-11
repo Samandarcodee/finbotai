@@ -35,22 +35,20 @@ class AIService:
         empty_text = "Ma'lumot yo'q"
         categories_str = ', '.join(categories) if categories else empty_text
 
-        prompt = f"""Siz O'zbekistonda yashovchi foydalanuvchiga moliyaviy maslahat beruvchi AI yordamchisiz.
-
-Foydalanuvchi ma'lumotlari:
-- Balans: {balance} so'm
-- Oylik kirim: {income} so'm  
-- Oylik chiqim: {expenses} so'm
-- Eng ko'p xarajat qilgan kategoriyalar: {categories_str}
-
-O'zbek tilida qisqa va foydali moliyaviy maslahat bering. Maslahat:
-1. 2-3 jumladan iborat bo'lsin
-2. Amaliy va qo'llash mumkin bo'lsin
-3. Ijobiy va motivatsiyali bo'lsin
-4. O'zbek tilida yozilsin
-
-Maslahat:"""
-        
+        prompt = (
+            f"Siz O'zbekistonda yashovchi foydalanuvchiga moliyaviy maslahat beruvchi AI yordamchisiz.\n\n"
+            f"Foydalanuvchi ma'lumotlari:\n"
+            f"- Balans: {balance} so'm\n"
+            f"- Oylik kirim: {income} so'm  \n"
+            f"- Oylik chiqim: {expenses} so'm\n"
+            f"- Eng ko'p xarajat qilgan kategoriyalar: {categories_str}\n\n"
+            "O'zbek tilida qisqa va foydali moliyaviy maslahat bering. Maslahat:\n"
+            "1. 2-3 jumladan iborat bo'lsin\n"
+            "2. Amaliy va qo'llash mumkin bo'lsin\n"
+            "3. Ijobiy va motivatsiyali bo'lsin\n"
+            "4. O'zbek tilida yozilsin\n\n"
+            "Maslahat:"
+        )
         return prompt
     
     async def _call_openai_api(self, prompt: str) -> str:
