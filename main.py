@@ -310,25 +310,12 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("🏠 Bosh menyuga qaytdingiz:", reply_markup=reply_markup)
         return ConversationHandler.END
 
-    elif text == "❓ Yordam":
-        await help_command(update, context)
-        # Send help message to admin
-        admin_message = f"🆘 YORDAM SO'ROVI\n\n👤 Foydalanuvchi: {update.message.from_user.first_name or 'Noma''lum'}\n🆔 ID: {user_id}\n📝 Xabar: Yordam so'rov yuborildi\n⏰ Vaqt: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
-        try:
-            # Send to admin (replace with your admin ID)
-            await context.bot.send_message(chat_id=user_id, text=admin_message)
-        except:
-            pass
-
-    else:
-        await update.message.reply_text(
-            "🤔 Tushunarsiz buyruq!\n\n"
-            "Quyidagi tugmalardan foydalaning yoki /help ni yozing."
-        )
-
+# BALANS
 async def show_balance(update: Update, user_id: int):
     """Show user balance with improved formatting"""
     try:
+        settings = get_user_settings(user_id)
+        currency = settings['currency']
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         
@@ -368,17 +355,17 @@ async def show_balance(update: Update, user_id: int):
         
         balance_text = f"""📊 BALANS HISOBOTI
 
-    💰 Bu oy ({datetime.now().strftime('%B %Y')}):
-    {month_emoji} Kirim: {format_currency(month_income)}
-    💸 Chiqim: {format_currency(month_expense)}
-    {balance_emoji} Balans: {format_currency(month_balance)}
+💰 Bu oy ({datetime.now().strftime('%B %Y')}):
+{month_emoji} Kirim: {format_currency(month_income, currency)}
+💸 Chiqim: {format_currency(month_expense, currency)}
+{balance_emoji} Balans: {format_currency(month_balance, currency)}
 
-    📈 Jami (barcha vaqt):
-    💰 Kirim: {format_currency(total_income)}
-    💸 Chiqim: {format_currency(total_expense)}
-    {balance_emoji} Balans: {format_currency(total_balance)}
+📈 Jami (barcha vaqt):
+💰 Kirim: {format_currency(total_income, currency)}
+💸 Chiqim: {format_currency(total_expense, currency)}
+{balance_emoji} Balans: {format_currency(total_balance, currency)}
 
-    💡 Maslahat: {get_balance_advice(total_balance, month_balance)}"""
+💡 Maslahat: {get_balance_advice(total_balance, month_balance)}"""
         
         await update.message.reply_text(balance_text)
         
@@ -397,9 +384,12 @@ def get_balance_advice(total_balance, month_balance):
     else:
         return "Balansingiz barqaror. Davom eting!"
 
+# TAHLIL
 async def show_analysis(update: Update, user_id: int):
     """Show transaction analysis with improved formatting"""
     try:
+        settings = get_user_settings(user_id)
+        currency = settings['currency']
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         
@@ -440,13 +430,13 @@ async def show_analysis(update: Update, user_id: int):
         for t in transactions[:5]:
             emoji = "💰" if t[0] == "income" else "💸"
             date_str = datetime.fromisoformat(t[4].replace('Z', '+00:00')).strftime("%d.%m")
-            analysis_text += f"{emoji} {date_str} - {format_currency(t[1])} - {t[2]}\n"
+            analysis_text += f"{emoji} {date_str} - {format_currency(t[1], currency)} - {t[2]}\n"
         
         # Category analysis
         if categories:
-            analysis_text += "\n📊 Eng ko'p xarajat qilgan kategoriyalar:\n"
+            analysis_text += "\n�� Eng ko'p xarajat qilgan kategoriyalar:\n"
             for cat, count, total in categories:
-                analysis_text += f"🏷️ {cat}: {format_currency(total)} ({count} ta)\n"
+                analysis_text += f"🏷️ {cat}: {format_currency(total, currency)} ({count} ta)\n"
         
         await update.message.reply_text(analysis_text)
         
@@ -454,11 +444,14 @@ async def show_analysis(update: Update, user_id: int):
         logger.error(f"Analysis error: {e}")
         await update.message.reply_text("❌ Tahlilni ko'rishda xatolik. Qaytadan urinib ko'ring.")
 
+# KIRIM QO'SHISH
 async def add_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return ConversationHandler.END
     
     user_id = update.message.from_user.id
+    settings = get_user_settings(user_id)
+    currency = settings['currency']
     text = update.message.text.strip()
     
     if text.lower() in ['/cancel', 'bekor', 'cancel']:
@@ -484,12 +477,12 @@ async def add_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         success_text = f"""✅ KIRIM QO'SHILDI!
 
-    💰 Miqdor: {format_currency(amount)}
-    📂 Kategoriya: {selected_category}
-    📝 Izoh: {note}
-    📅 Sana: {datetime.now().strftime('%d.%m.%Y %H:%M')}
+💰 Miqdor: {format_currency(amount, currency)}
+📂 Kategoriya: {selected_category}
+📝 Izoh: {note}
+📅 Sana: {datetime.now().strftime('%d.%m.%Y %H:%M')}
 
-    💡 Davom eting - har bir kirim muhim!"""
+💡 Davom eting - har bir kirim muhim!"""
         
         await update.message.reply_text(success_text)
         return ConversationHandler.END
@@ -585,11 +578,14 @@ async def expense_category_selected(update: Update, context: ContextTypes.DEFAUL
     )
     return 2
 
+# CHIQIM QO'SHISH
 async def add_expense(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return ConversationHandler.END
     
     user_id = update.message.from_user.id
+    settings = get_user_settings(user_id)
+    currency = settings['currency']
     text = update.message.text.strip()
     selected_category = context.user_data.get('selected_expense_category', 'Boshqa')
     
@@ -615,12 +611,12 @@ async def add_expense(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         success_text = f"""✅ CHIQIM QO'SHILDI!
 
-    💸 Miqdor: {format_currency(amount)}
-    📂 Kategoriya: {selected_category}
-    📝 Izoh: {note}
-    📅 Sana: {datetime.now().strftime('%d.%m.%Y %H:%M')}
+💸 Miqdor: {format_currency(amount, currency)}
+📂 Kategoriya: {selected_category}
+📝 Izoh: {note}
+📅 Sana: {datetime.now().strftime('%d.%m.%Y %H:%M')}
 
-    💡 Xarajatlaringizni nazorat qiling!"""
+💡 Xarajatlaringizni nazorat qiling!"""
         
         await update.message.reply_text(success_text)
         return ConversationHandler.END
@@ -633,6 +629,8 @@ async def add_expense(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ==== ADDITIONAL FEATURES ====
 async def show_categories(update: Update, user_id: int):
     try:
+        settings = get_user_settings(user_id)
+        currency = settings['currency']
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("""
@@ -658,7 +656,7 @@ async def show_categories(update: Update, user_id: int):
         for cat, count, total in categories:
             percentage = (total / total_expense * 100) if total_expense > 0 else 0
             text += f"🏷️ {cat}:\n"
-            text += f"   💰 {format_currency(total)} ({count} ta)\n"
+            text += f"   💰 {format_currency(total, currency)} ({count} ta)\n"
             text += f"   📊 {percentage:.1f}% xarajat\n\n"
         
         await update.message.reply_text(text)
@@ -669,6 +667,8 @@ async def show_categories(update: Update, user_id: int):
 
 async def show_budget_status(update: Update, user_id: int):
     try:
+        settings = get_user_settings(user_id)
+        currency = settings['currency']
         from datetime import datetime
         current_month = datetime.now().strftime("%Y-%m")
         
@@ -714,9 +714,9 @@ async def show_budget_status(update: Update, user_id: int):
                 status = "🔴"
             
             text += f"{status} {category}:\n"
-            text += f"   💰 Byudjet: {format_currency(budget_amount)}\n"
-            text += f"   💸 Sarflangan: {format_currency(spent)} ({percentage:.1f}%)\n"
-            text += f"   💵 Qolgan: {format_currency(remaining)}\n\n"
+            text += f"   💰 Byudjet: {format_currency(budget_amount, currency)}\n"
+            text += f"   💸 Sarflangan: {format_currency(spent, currency)} ({percentage:.1f}%)\n"
+            text += f"   💵 Qolgan: {format_currency(remaining, currency)}\n\n"
         
         await update.message.reply_text(text)
         
@@ -726,6 +726,8 @@ async def show_budget_status(update: Update, user_id: int):
 
 async def export_data(update: Update, user_id: int):
     try:
+        settings = get_user_settings(user_id)
+        currency = settings['currency']
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("""
@@ -752,7 +754,7 @@ async def export_data(update: Update, user_id: int):
         for t in transactions:
             t_type = "💰 Kirim" if t[0] == "income" else "💸 Chiqim"
             date_str = datetime.fromisoformat(t[4].replace('Z', '+00:00')).strftime("%d.%m.%Y")
-            export_text += f"{date_str} | {t_type} | {format_currency(t[1])} | {t[3]} | {t[2]}\n"
+            export_text += f"{date_str} | {t_type} | {format_currency(t[1], currency)} | {t[3]} | {t[2]}\n"
         
         await update.message.reply_text(export_text)
         
@@ -762,6 +764,8 @@ async def export_data(update: Update, user_id: int):
 
 async def show_records(update: Update, user_id: int):
     try:
+        settings = get_user_settings(user_id)
+        currency = settings['currency']
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         
@@ -803,11 +807,11 @@ async def show_records(update: Update, user_id: int):
         text = "🏆 REKORDLARINGIZ:\n\n"
         
         if max_income and max_income[0]:
-            text += f"💰 Eng katta kirim: {format_currency(max_income[0])}\n"
+            text += f"💰 Eng katta kirim: {format_currency(max_income[0], currency)}\n"
             text += f"   📝 {max_income[1]}\n\n"
         
         if max_expense and max_expense[0]:
-            text += f"💸 Eng katta chiqim: {format_currency(max_expense[0])}\n"
+            text += f"💸 Eng katta chiqim: {format_currency(max_expense[0], currency)}\n"
             text += f"   📝 {max_expense[1]}\n\n"
         
         if active_day and active_day[1]:
@@ -815,7 +819,7 @@ async def show_records(update: Update, user_id: int):
             text += f"📅 Eng faol kun: {date_str} ({active_day[1]} ta tranzaksiya)\n\n"
         
         text += f"📊 Jami tranzaksiyalar: {total_transactions} ta\n"
-        text += f"📈 O'rtacha oylik xarajat: {format_currency(int(avg_monthly))}"
+        text += f"📈 O'rtacha oylik xarajat: {format_currency(int(avg_monthly), currency)}"
         
         await update.message.reply_text(text)
         
@@ -1041,6 +1045,17 @@ def main():
     ADMIN_ID = 786171158  # Sizning Telegram ID'ingiz
     ASK_SUPPORT = 100  # yangi state
 
+    yangi_conv_handler = ConversationHandler(
+        entry_points=[
+            MessageHandler(filters.Regex("❓ Yordam"), help_command),
+            CommandHandler("help", help_command)
+        ],
+        states={
+            ASK_SUPPORT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_support_message)],
+        },
+        fallbacks=[CommandHandler("cancel", cancel)]
+    )
+
     conv_handler = ConversationHandler(
         entry_points=[MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler)],
         states={
@@ -1055,19 +1070,11 @@ def main():
         fallbacks=[CommandHandler("start", start), CommandHandler("cancel", cancel)]
     )
 
-    yangi_conv_handler = ConversationHandler(
-        entry_points=[MessageHandler(filters.Regex("❓ Yordam"), help_command)],
-        states={
-            ASK_SUPPORT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_support_message)],
-        },
-        fallbacks=[CommandHandler("cancel", cancel)]
-    )
-
+    app.add_handler(yangi_conv_handler)  # Yordam handleri birinchi
+    app.add_handler(conv_handler)
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("cancel", cancel))
-    app.add_handler(conv_handler)
-    app.add_handler(yangi_conv_handler)
     app.add_handler(MessageHandler(filters.Regex("^/reply_"), admin_reply))
 
     logger.info("FinBot AI ishga tushmoqda...")
