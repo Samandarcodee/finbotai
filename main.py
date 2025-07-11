@@ -21,7 +21,7 @@ MESSAGES = {
     "uz": {
         "settings": "⚙️ Sozlamalar\n\nTil: {lang}\nValyuta: {currency}\n\nQuyidagilardan birini tanlang:",
         "settings_menu": [
-            ["🌐 Tilni o'zgartirish", "💰 Valyutani o'zgartirish"],
+            ["💰 Valyutani o'zgartirish"],
             ["🏠 Bosh menyu"]
         ],
         "choose_language": "🌐 Tilni tanlang:",
@@ -37,7 +37,7 @@ MESSAGES = {
     "ru": {
         "settings": "⚙️ Настройки\n\nЯзык: {lang}\nВалюта: {currency}\n\nВыберите одну из опций:",
         "settings_menu": [
-            ["🌐 Изменить язык", "💰 Изменить валюту"],
+            ["💰 Изменить валюту"],
             ["🏠 Главное меню"]
         ],
         "choose_language": "🌐 Выберите язык:",
@@ -53,7 +53,7 @@ MESSAGES = {
     "en": {
         "settings": "⚙️ Settings\n\nLanguage: {lang}\nCurrency: {currency}\n\nPlease choose one:",
         "settings_menu": [
-            ["🌐 Change language", "💰 Change currency"],
+            ["💰 Change currency"],
             ["🏠 Main menu"]
         ],
         "choose_language": "🌐 Choose a language:",
@@ -328,25 +328,11 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "⚙️ Sozlamalar":
         return await show_settings(update, user_id)
     
-    elif text == "🌐 Tilni o'zgartirish":
-        await update.message.reply_text(
-            "🌐 TILNI O'ZGARTIRISH\n\n"
-            "Hozircha faqat O'zbek tili qo'llab-quvvatlanadi.\n"
-            "Kelajakda boshqa tillar qo'shiladi! 🇺🇿"
-        )
-        return await show_settings(update, user_id)
-    
     elif text == "💰 Valyutani o'zgartirish":
-        currency_keyboard = [
-            ["🇺🇿 So'm", "💵 Dollar"],
-            ["💶 Euro", "💷 Rubl"],
-            ["🔙 Orqaga"]
-        ]
-        reply_markup = ReplyKeyboardMarkup(currency_keyboard, resize_keyboard=True, one_time_keyboard=True)
         await update.message.reply_text(
             "💰 VALYUTANI O'ZGARTIRISH\n\n"
             "Valyutani tanlang:",
-            reply_markup=reply_markup
+            reply_markup=ReplyKeyboardMarkup([["🇺🇿 So'm", "💵 Dollar"], ["💶 Euro", "💷 Rubl"], ["🔙 Orqaga"]], resize_keyboard=True, one_time_keyboard=True)
         )
         return 6
     
@@ -1113,13 +1099,6 @@ async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user_id is None:
             return ConversationHandler.END
         return await show_settings(update, user_id)
-    elif text in ["🌐 Tilni o'zgartirish", "🌐 Изменить язык", "🌐 Change language"]:
-        reply_markup = ReplyKeyboardMarkup(
-            [[l] for l in MESSAGES[lang]["languages"]],
-            resize_keyboard=True, one_time_keyboard=True
-        )
-        await update.message.reply_text(MESSAGES[lang]["choose_language"], reply_markup=reply_markup)
-        return 8
     elif text in ["💰 Valyutani o'zgartirish", "💰 Изменить валюту", "💰 Change currency"]:
         reply_markup = ReplyKeyboardMarkup(
             [[c] for c in MESSAGES[lang]["currencies"]] + [[MESSAGES[lang]["main_menu"]]],
@@ -1130,40 +1109,6 @@ async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text(MESSAGES[lang]["invalid_choice"])
         return 5
-
-async def language_selection_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message or not update.message.text or not hasattr(update.message, 'from_user'):
-        return ConversationHandler.END
-    text = update.message.text
-    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
-    lang = get_user_settings(user_id)['language']
-    language_map = {
-        "O'zbek tili": "uz",
-        "Русский язык": "ru",
-        "English": "en"
-    }
-    if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main menu"]:
-        return await start(update, context)
-    elif text == MESSAGES[lang]["main_menu"]:
-        return await start(update, context)
-    elif text in language_map:
-        new_lang = language_map[text]
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute("UPDATE user_settings SET language = ? WHERE user_id = ?", (new_lang, user_id))
-        conn.commit()
-        conn.close()
-        await update.message.reply_text(MESSAGES[new_lang]["language_changed"].format(lang=text))
-        if user_id is None:
-            return ConversationHandler.END
-        return await show_settings(update, user_id)
-    else:
-        reply_markup = ReplyKeyboardMarkup(
-            [[l] for l in MESSAGES[lang]["languages"]],
-            resize_keyboard=True, one_time_keyboard=True
-        )
-        await update.message.reply_text(MESSAGES[lang]["invalid_choice"], reply_markup=reply_markup)
-        return 8
 
 async def currency_selection_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text or not hasattr(update.message, 'from_user'):
@@ -1267,7 +1212,6 @@ def main():
             5: [MessageHandler(filters.TEXT & ~filters.COMMAND, settings_handler)], # New state for settings
             6: [MessageHandler(filters.TEXT & ~filters.COMMAND, currency_selection_handler)],
             7: [MessageHandler(filters.TEXT & ~filters.COMMAND, delete_data_handler)],
-            8: [MessageHandler(filters.TEXT & ~filters.COMMAND, language_selection_handler)], # New state for language selection
             9: [MessageHandler(filters.TEXT & ~filters.COMMAND, currency_selection_handler)], # New state for currency selection
         },
         fallbacks=[CommandHandler("start", start), CommandHandler("cancel", cancel)]
