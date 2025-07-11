@@ -52,9 +52,19 @@ MESSAGES = {
         "currency_changed": "✅ Currency changed successfully: {currency}",
         "main_menu": "🏠 Main menu",
         "invalid_choice": "❌ Invalid choice. Please select again.",
-        "currencies": ["🇺🇿 So'm", "💵 Dollar", "💶 Euro", "�� Ruble"]
+        "currencies": ["🇺🇿 So'm", "💵 Dollar", "💶 Euro", "💷 Ruble"]
     },
 }
+
+# ==== MAIN MENU KEYBOARD (reuse everywhere) ====
+MAIN_MENU_KEYBOARD = [
+    ["💰 Kirim qo'shish", "💸 Chiqim qo'shish"],
+    ["📊 Balans", "📈 Tahlil"],
+    ["📋 Kategoriyalar", "🎯 Byudjet"],
+    ["📤 Export", "🏆 Rekorlar"],
+    ["🤖 AI maslahat", "📊 AI Tahlil"],
+    ["⚙️ Sozlamalar", "❓ Yordam"]
+]
 
 # ==== LOGGING ====
 logging.basicConfig(
@@ -146,17 +156,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     # Initialize user settings
     get_user_settings(user_id)
-    
-    keyboard = [
-        ["�� Kirim qo'shish", "💸 Chiqim qo'shish"],
-        ["📊 Balans", "📈 Tahlil"],
-        ["📋 Kategoriyalar", "🎯 Byudjet"],
-        ["📤 Export", "🏆 Rekorlar"],
-        ["🤖 AI maslahat", "📊 AI Tahlil"],
-        ["⚙️ Sozlamalar", "❓ Yordam"]
-    ]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    
+    reply_markup = ReplyKeyboardMarkup(MAIN_MENU_KEYBOARD, resize_keyboard=True)
     welcome_text = f"""👋 Assalomu alaykum, {user_name}!
 
     Men FinBot AI - sizning aqlli moliyaviy yordamchingiz! 💰
@@ -169,7 +169,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     • 📈 Moliyaviy maslahatlar
 
     Quyidagi tugmalardan foydalaning:"""
-    
     await update.message.reply_text(welcome_text, reply_markup=reply_markup)
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -224,33 +223,18 @@ async def admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return ConversationHandler.END
-    
-    keyboard = [
-        ["💰 Kirim qo'shish", "💸 Chiqim qo'shish"],
-        ["📊 Balans", "📈 Tahlil"],
-        ["📋 Kategoriyalar", "🎯 Byudjet"],
-        ["📤 Export", "🏆 Rekorlar"],
-        ["🤖 AI maslahat", "📊 AI Tahlil"],
-        ["⚙️ Sozlamalar", "❓ Yordam"]
-    ]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    
+    reply_markup = ReplyKeyboardMarkup(MAIN_MENU_KEYBOARD, resize_keyboard=True)
     await update.message.reply_text("❌ Amal bekor qilindi. Boshqa funksiyani tanlang:", reply_markup=reply_markup)
     return ConversationHandler.END
 
 # ==== HANDLERS ====
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Main menu handler. Allows universal /start and /cancel."""
     if not update.message or not update.message.text or not hasattr(update.message, 'from_user'):
-        return
-    if not update.message or not hasattr(update.message, 'from_user'):
         return
     text = update.message.text
     user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
-    # Universal navigation
     if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu", "🏠 Главное меню", "🏠 Main menu"]:
         return await start(update, context)
-    
     if user_id is None:
         return ConversationHandler.END
 
@@ -269,7 +253,6 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=category_markup
         )
         return 4
-
     elif text == "💸 Chiqim qo'shish":
         categories_keyboard = [
             ["🍔 Oziq-ovqat", "🚗 Transport"],
@@ -285,94 +268,30 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=category_markup
         )
         return 3
-
     elif text == "📊 Balans":
         return await show_balance(update, user_id)
-
     elif text == "📈 Tahlil":
         return await show_analysis(update, user_id)
-
     elif text == "🤖 AI maslahat":
         return await show_ai_advice(update, user_id)
-
     elif text == "📊 AI Tahlil":
         return await show_ai_analysis(update, user_id)
-
     elif text == "💡 Motivatsiya":
         await show_motivation(update)
-
     elif text == "📋 Kategoriyalar":
         return await show_categories(update, user_id)
-
     elif text == "🎯 Byudjet":
         return await show_budget_status(update, user_id)
-
     elif text == "📤 Export":
         return await export_data(update, user_id)
-
     elif text == "🏆 Rekorlar":
         return await show_records(update, user_id)
-
     elif text == "⚙️ Sozlamalar":
         return await show_settings(update, user_id)
-    
-    elif text == "💰 Valyutani o'zgartirish":
-        await update.message.reply_text(
-            "💰 VALYUTANI O'ZGARTIRISH\n\n"
-            "Valyutani tanlang:",
-            reply_markup=ReplyKeyboardMarkup([["🇺🇿 So'm", "💵 Dollar"], ["💶 Euro", "💷 Rubl"], ["🔙 Orqaga"]], resize_keyboard=True, one_time_keyboard=True)
-        )
-        return 6
-    
-    elif text == "🔔 Bildirishnomalar":
-        await update.message.reply_text(
-            "🔔 BILDIRISHNOMALAR\n\n"
-            "Hozircha bildirishnomalar faqat bot orqali yuboriladi.\n"
-            "Kelajakda push-bildirishnomalar qo'shiladi! 📱"
-        )
-        return await show_settings(update, user_id)
-    
-    elif text == "📊 Hisobot turi":
-        await update.message.reply_text(
-            "📊 HISOBOT TURI\n\n"
-            "Hozircha standart hisobotlar qo'llab-quvvatlanadi.\n"
-            "Kelajakda grafik va diagrammalar qo'shiladi! 📈"
-        )
-        return await show_settings(update, user_id)
-    
-    elif text == "🗑️ Ma'lumotlarni o'chirish":
-        delete_keyboard = [
-            ["✅ Ha, o'chirish", "❌ Yo'q, bekor qilish"]
-        ]
-        reply_markup = ReplyKeyboardMarkup(delete_keyboard, resize_keyboard=True, one_time_keyboard=True)
-        await update.message.reply_text(
-            "🗑️ MA'LUMOTLARNI O'CHIRISH\n\n"
-            "⚠️ EHTIYOT! Bu amalni qayta tiklab bo'lmaydi!\n\n"
-            "Barcha tranzaksiyalar va sozlamalar o'chiriladi.\n"
-            "Rostan ham o'chirishni xohlaysizmi?",
-            reply_markup=reply_markup
-        )
-        return 7
-    
-    elif text == "🔙 Orqaga":
-        keyboard = [
-            ["💰 Kirim qo'shish", "💸 Chiqim qo'shish"],
-            ["📊 Balans", "📈 Tahlil"],
-            ["📋 Kategoriyalar", "🎯 Byudjet"],
-            ["📤 Export", "🏆 Rekorlar"],
-            ["🤖 AI maslahat", "📊 AI Tahlil"],
-            ["⚙️ Sozlamalar", "❓ Yordam"]
-        ]
-        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-        await update.message.reply_text("🏠 Bosh menyuga qaytdingiz:", reply_markup=reply_markup)
-        return ConversationHandler.END
-
-    elif text == "🤖 AI maslahat" or text == "📊 AI Tahlil":
-        if update.message is not None:
-            await update.message.reply_text(
-                "🤖 AI funksiyasi tez orada ishga tushadi!\n"
-                "Yaqin kunlarda siz uchun aqlli moliyaviy maslahatlar va tahlillar tayyorlaymiz. Yangilanishlarni kuzatib boring! 🚀"
-            )
+    elif text == "❓ Yordam":
+        return await help_command(update, context)
+    else:
+        await update.message.reply_text("❌ Noto'g'ri tanlov. Qaytadan tanlang.")
         return ConversationHandler.END
 
 # BALANS
