@@ -126,33 +126,37 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(welcome_text, reply_markup=reply_markup)
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message:
+    await update.message.reply_text(
+        "Yordam uchun savolingizni yozing. Admin sizga javob beradi.\n\nBekor qilish uchun /cancel yozing."
+    )
+    return ASK_SUPPORT
+
+async def handle_support_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.message.from_user
+    user_message = update.message.text
+    admin_text = (
+        f"🆘 Yangi yordam so'rovi!\n"
+        f"👤 Foydalanuvchi: {user.first_name} ({user.id})\n"
+        f"✉️ Xabar: {user_message}\n\n"
+        f"Javob berish uchun: /reply_{user.id} <javob matni>"
+    )
+    await context.bot.send_message(chat_id=ADMIN_ID, text=admin_text)
+    await update.message.reply_text("Yordam so'rovingiz yuborildi. Admin tez orada javob beradi.")
+    return ConversationHandler.END
+
+async def admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message.from_user.id != ADMIN_ID:
         return
-    
-    help_text = """❓ YORDAM
-
-    📋 Asosiy buyruqlar:
-    /start - Botni boshlash
-    /help - Yordam ko'rsatish
-    /cancel - Amalni bekor qilish
-
-    💰 Kirim qo'shish:
-    1. "💰 Kirim qo'shish" tugmasini bosing
-    2. Miqdorni kiriting (masalan: 50000 ish haqi)
-
-    💸 Chiqim qo'shish:
-    1. "💸 Chiqim qo'shish" tugmasini bosing
-    2. Kategoriyani tanlang
-    3. Miqdorni kiriting (masalan: 25000 kofe)
-
-    📊 Boshqa funksiyalar:
-    • Balans ko'rish uchun "📊 Balans" tugmasini bosing
-    • Tahlil uchun "📈 Tahlil" tugmasini bosing
-    • AI maslahat uchun "🤖 AI maslahat" tugmasini bosing
-
-    💡 Maslahat: Har bir tranzaksiyada izoh qoldiring - bu kelajakda foydali bo'ladi!"""
-    
-    await update.message.reply_text(help_text)
+    text = update.message.text
+    if text.startswith("/reply_"):
+        try:
+            parts = text.split(" ", 1)
+            user_id = int(parts[0].replace("/reply_", ""))
+            reply_text = parts[1] if len(parts) > 1 else "Admin javobi yo'q."
+            await context.bot.send_message(chat_id=user_id, text=f"Admin javobi: {reply_text}")
+            await update.message.reply_text("Javob foydalanuvchiga yuborildi.")
+        except Exception as e:
+            await update.message.reply_text(f"Xatolik: {e}")
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
@@ -1034,6 +1038,9 @@ def main():
     init_db()
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
+    ADMIN_ID = 786171158  # Sizning Telegram ID'ingiz
+    ASK_SUPPORT = 100  # yangi state
+
     conv_handler = ConversationHandler(
         entry_points=[MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler)],
         states={
@@ -1048,10 +1055,20 @@ def main():
         fallbacks=[CommandHandler("start", start), CommandHandler("cancel", cancel)]
     )
 
+    yangi_conv_handler = ConversationHandler(
+        entry_points=[MessageHandler(filters.Regex("❓ Yordam"), help_command)],
+        states={
+            ASK_SUPPORT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_support_message)],
+        },
+        fallbacks=[CommandHandler("cancel", cancel)]
+    )
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(conv_handler)
+    app.add_handler(yangi_conv_handler)
+    app.add_handler(MessageHandler(filters.Regex("^/reply_"), admin_reply))
 
     logger.info("FinBot AI ishga tushmoqda...")
     app.run_polling()
