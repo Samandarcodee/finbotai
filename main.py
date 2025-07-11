@@ -958,24 +958,17 @@ async def show_motivation(update: Update):
     motivation = random.choice(motivations)
     await update.message.reply_text(motivation)
 
+# Robust fallback for settings
 async def show_settings(update: Update, user_id: int):
     """Show user settings"""
     settings = get_user_settings(user_id)
-    
     settings_keyboard = [
         ["🌐 Tilni o'zgartirish", "💰 Valyutani o'zgartirish"],
         ["🔔 Bildirishnomalar", "📊 Hisobot turi"],
         ["🗑️ Ma'lumotlarni o'chirish", "🔙 Orqaga"]
     ]
     reply_markup = ReplyKeyboardMarkup(settings_keyboard, resize_keyboard=True, one_time_keyboard=True)
-    
-    settings_text = f"""⚙️ SOZLAMALAR
-
-🌐 Til: {settings['language']}
-💰 Valyuta: {settings['currency']}
-
-Quyidagi sozlamalarni o'zgartirish mumkin:"""
-    
+    settings_text = f"""⚙️ SOZLAMALAR\n\n🌐 Til: {settings['language']}\n💰 Valyuta: {settings['currency']}\n\nQuyidagi sozlamalarni o'zgartirish mumkin:"""
     await update.message.reply_text(settings_text, reply_markup=reply_markup)
     return 5
 
@@ -1028,8 +1021,11 @@ async def delete_data_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         c.execute("DELETE FROM user_settings WHERE user_id = ?", (user_id,))
         conn.commit()
         conn.close()
-        
+        # Clear session/context
+        if hasattr(context, 'user_data'):
+            context.user_data.clear()
         await update.message.reply_text("🗑️ Barcha ma'lumotlar muvaffaqiyatli o'chirildi!")
+        # Show main menu
         return await start(update, context)
     
     elif text == "❌ Yo'q, bekor qilish":
