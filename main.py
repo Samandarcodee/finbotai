@@ -1023,21 +1023,26 @@ async def show_settings(update: Update, user_id: int):
     return 5
 
 async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle settings menu navigation and actions. Always allow 'Orqaga' and 'Bosh menyu'."""
     if not update.message or not update.message.text or not hasattr(update.message, 'from_user'):
         return ConversationHandler.END
-    if not update.message or not hasattr(update.message, 'from_user'):
-        return ConversationHandler.END
     text = update.message.text
-    user_id = update.message.from_user.id
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     lang = get_user_settings(user_id)['language']
     if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu"]:
-        return await start(update, context)
+        await start(update, context)
+        return ConversationHandler.END
     elif text == MESSAGES[lang]["main_menu"]:
-        return await start(update, context)
+        await start(update, context)
+        return ConversationHandler.END
     elif text == MESSAGES[lang]["back"]:
         return await show_settings(update, user_id)
     elif text == "🌐 Tilni o'zgartirish":
+        # If only one language, show info message
+        if len(MESSAGES[lang]["languages"]) <= 1:
+            await update.message.reply_text(
+                "🌐 TILNI O'ZGARTIRISH\n\nHozircha faqat O'zbek tili mavjud. Kelajakda boshqa tillar qo'shiladi! 🇺🇿"
+            )
+            return await show_settings(update, user_id)
         reply_markup = ReplyKeyboardMarkup(
             [[l] for l in MESSAGES[lang]["languages"]] + [[MESSAGES[lang]["back"]], [MESSAGES[lang]["main_menu"]]],
             resize_keyboard=True, one_time_keyboard=True
@@ -1056,18 +1061,17 @@ async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return 5
 
 async def language_selection_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle language selection. Always allow 'Orqaga' and 'Bosh menyu'."""
     if not update.message or not update.message.text or not hasattr(update.message, 'from_user'):
         return ConversationHandler.END
-    if not update.message or not hasattr(update.message, 'from_user'):
-        return ConversationHandler.END
     text = update.message.text
-    user_id = update.message.from_user.id
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     lang = get_user_settings(user_id)['language']
     if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu"]:
-        return await start(update, context)
+        await start(update, context)
+        return ConversationHandler.END
     elif text == MESSAGES[lang]["main_menu"]:
-        return await start(update, context)
+        await start(update, context)
+        return ConversationHandler.END
     elif text == MESSAGES[lang]["back"]:
         return await show_settings(update, user_id)
     elif text in MESSAGES[lang]["languages"]:
@@ -1087,13 +1091,10 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
         return 8
 
 async def currency_selection_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle currency selection. Always allow 'Orqaga' and 'Bosh menyu'."""
     if not update.message or not update.message.text or not hasattr(update.message, 'from_user'):
         return ConversationHandler.END
-    if not update.message or not hasattr(update.message, 'from_user'):
-        return ConversationHandler.END
     text = update.message.text
-    user_id = update.message.from_user.id
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     lang = get_user_settings(user_id)['language']
     currency_map = {
         "🇺🇿 So'm": "so'm",
@@ -1102,9 +1103,11 @@ async def currency_selection_handler(update: Update, context: ContextTypes.DEFAU
         "💷 Rubl": "RUB"
     }
     if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu"]:
-        return await start(update, context)
+        await start(update, context)
+        return ConversationHandler.END
     elif text == MESSAGES[lang]["main_menu"]:
-        return await start(update, context)
+        await start(update, context)
+        return ConversationHandler.END
     elif text == MESSAGES[lang]["back"]:
         return await show_settings(update, user_id)
     elif text in currency_map:
