@@ -277,9 +277,11 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "\U0001F3C6 Rekorlar":
         return await show_records(update, user_id)
     elif text == "🤖 AI Byudjet":
-        return AI_BUDGET_INCOME if await ai_budget_start(update, context) is not None else ConversationHandler.END
+        await update.message.reply_text("AI byudjet funksiyasi uchun /ai_byudjet buyrug'ini yuboring yoki shu komandani bosing.")
+        return ConversationHandler.END
     elif text == "🎯 AI Maqsad":
-        return AI_GOAL_NAME if await ai_goal_start(update, context) is not None else ConversationHandler.END
+        await update.message.reply_text("AI maqsad funksiyasi uchun /ai_maqsad buyrug'ini yuboring yoki shu komandani bosing.")
+        return ConversationHandler.END
     elif text == "\u2753 Yordam":
         return await help_command(update, context)
     else:
