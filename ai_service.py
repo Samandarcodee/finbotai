@@ -1,47 +1,53 @@
-import os
 import requests
 
-HUGGINGFACE_API_TOKEN = os.getenv("HUGGINGFACE_API_TOKEN")
-API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-small"
-HEADERS = {"Authorization": f"Bearer {HUGGINGFACE_API_TOKEN}"}
+RAPIDAPI_URL = 'https://chatgpt-42.p.rapidapi.com/gpt4'
+RAPIDAPI_KEY = '2ac44aca25msh901b0ec27b93167p121bacjsnba9e2c3ca446'
+RAPIDAPI_HOST = 'chatgpt-42.p.rapidapi.com'
+
+HEADERS = {
+    "content-type": "application/json",
+    "X-RapidAPI-Key": RAPIDAPI_KEY,
+    "X-RapidAPI-Host": RAPIDAPI_HOST
+}
 
 class ai_service:
     @staticmethod
     def get_financial_advice(user_data):
+        """Get financial advice in Uzbek using RapidAPI GPT-4."""
         prompt = f"User data: {user_data}. Give financial advice in Uzbek."
-        response = requests.post(API_URL, headers=HEADERS, json={"inputs": prompt})
-        print("Status code:", response.status_code)
-        print("Response:", response.text)
-        if response.status_code == 200:
-            result = response.json()
-            if isinstance(result, list) and "generated_text" in result[0]:
-                return result[0]["generated_text"]
-            elif isinstance(result, dict) and "generated_text" in result:
-                return result["generated_text"]
+        data = {
+            "messages": [
+                {"role": "user", "content": prompt}
+            ]
+        }
+        try:
+            response = requests.post(RAPIDAPI_URL, json=data, headers=HEADERS, timeout=30)
+            if response.status_code == 200:
+                result = response.json()
+                return result.get("result", "AI javobini olishda xatolik.")
             else:
-                return f"AI maslahatini olishda xatolik. To'liq javob: {response.text}"
-        else:
-            return f"AI xizmatida xatolik. Status: {response.status_code}, Javob: {response.text}"
+                return f"AI xizmatida xatolik. Status: {response.status_code}, Javob: {response.text}"
+        except Exception as e:
+            return f"AI xizmatida xatolik: {e}"
 
     @staticmethod
     def analyze_spending_patterns(transactions):
-        # Prompt hajmini cheklash: faqat oxirgi 10 ta tranzaksiya
-        if isinstance(transactions, list) and len(transactions) > 10:
-            transactions = transactions[:10]
+        """Analyze spending patterns in Uzbek using RapidAPI GPT-4."""
         prompt = f"Analyze these transactions and give a summary in Uzbek: {transactions}"
-        response = requests.post(API_URL, headers=HEADERS, json={"inputs": prompt})
-        print("Status code:", response.status_code)
-        print("Response:", response.text)
-        if response.status_code == 200:
-            result = response.json()
-            if isinstance(result, list) and "generated_text" in result[0]:
-                return result[0]["generated_text"]
-            elif isinstance(result, dict) and "generated_text" in result:
-                return result["generated_text"]
+        data = {
+            "messages": [
+                {"role": "user", "content": prompt}
+            ]
+        }
+        try:
+            response = requests.post(RAPIDAPI_URL, json=data, headers=HEADERS, timeout=30)
+            if response.status_code == 200:
+                result = response.json()
+                return result.get("result", "AI javobini olishda xatolik.")
             else:
-                return f"AI tahlilini olishda xatolik. To'liq javob: {response.text}"
-        else:
-            return f"AI xizmatida xatolik. Status: {response.status_code}, Javob: {response.text}"
+                return f"AI xizmatida xatolik. Status: {response.status_code}, Javob: {response.text}"
+        except Exception as e:
+            return f"AI xizmatida xatolik: {e}"
 
     @staticmethod
     def get_default_advice():
