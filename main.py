@@ -1370,16 +1370,19 @@ def main():
     )
 
     conv_handler = ConversationHandler(
-        entry_points=[MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler)],
+        entry_points=[MessageHandler(
+            filters.Regex(r"^(\U0001F4B0 Kirim qo'shish|\U0001F4B8 Chiqim qo'shish|\U0001F4CA Balans|\U0001F4C8 Tahlil|\U0001F4CB Kategoriyalar|\U0001F3AF Byudjet|\U0001F4E4 Export|\U0001F3C6 Rekorlar|\U0001F916 AI maslahat|\U0001F4CA AI Tahlil|\u2753 Yordam)$"),
+            message_handler
+        )],
         states={
             1: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_income)],
             2: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_expense)],
             3: [MessageHandler(filters.TEXT & ~filters.COMMAND, expense_category_selected)],
             4: [MessageHandler(filters.TEXT & ~filters.COMMAND, income_category_selected)],
-            5: [MessageHandler(filters.TEXT & ~filters.COMMAND, settings_handler)], # New state for settings
+            5: [MessageHandler(filters.TEXT & ~filters.COMMAND, settings_handler)],
             6: [MessageHandler(filters.TEXT & ~filters.COMMAND, currency_selection_handler)],
             7: [MessageHandler(filters.TEXT & ~filters.COMMAND, delete_data_handler)],
-            9: [MessageHandler(filters.TEXT & ~filters.COMMAND, currency_selection_handler)], # New state for currency selection
+            9: [MessageHandler(filters.TEXT & ~filters.COMMAND, currency_selection_handler)],
         },
         fallbacks=[CommandHandler("start", start), CommandHandler("cancel", cancel)]
     )
