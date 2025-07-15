@@ -795,7 +795,10 @@ async def show_records(update: Update, user_id: int):
 
 async def show_ai_analysis(update: Update, user_id: int):
     """Show AI-powered spending analysis using RapidAPI GPT-4."""
+    loading_message = None
     try:
+        if update.message:
+            loading_message = await update.message.reply_text("⏳ AI javobi tayyorlanmoqda...")
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("""
@@ -812,6 +815,8 @@ async def show_ai_analysis(update: Update, user_id: int):
                 await update.message.reply_text(
                     "📊 AI Tahlil\n\nTahlil qilish uchun tranzaksiyalar yo'q. Avval kirim yoki chiqim qo'shing!"
                 )
+            if loading_message:
+                await loading_message.delete()
             return
         formatted_transactions = []
         for t in transactions:
@@ -824,19 +829,28 @@ async def show_ai_analysis(update: Update, user_id: int):
             })
         try:
             analysis = ai_service.analyze_spending_patterns(formatted_transactions)
+            # Remove all '**' from the AI response
+            analysis = analysis.replace('**', '') if analysis else analysis
             if update.message:
                 await update.message.reply_text(analysis)
         except Exception as e:
             if update.message:
                 await update.message.reply_text(f"AI tahlil xatosi: {e}")
+        if loading_message:
+            await loading_message.delete()
     except Exception as e:
         logger.error(f"AI analysis error: {e}")
         if update.message:
             await update.message.reply_text("AI tahlil xatosi yoki ma'lumot yetarli emas.")
+        if loading_message:
+            await loading_message.delete()
 
 async def show_ai_advice(update: Update, user_id: int):
     """Show AI financial advice based on user data using RapidAPI GPT-4."""
+    loading_message = None
     try:
+        if update.message:
+            loading_message = await update.message.reply_text("⏳ AI javobi tayyorlanmoqda...")
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         current_month = datetime.now().strftime("%Y-%m")
@@ -879,15 +893,21 @@ async def show_ai_advice(update: Update, user_id: int):
         }
         try:
             advice = ai_service.get_financial_advice(user_data)
+            # Remove all '**' from the AI response
+            advice = advice.replace('**', '') if advice else advice
             if update.message:
                 await update.message.reply_text(advice)
         except Exception as e:
             if update.message:
                 await update.message.reply_text(f"AI maslahat xatosi: {e}")
+        if loading_message:
+            await loading_message.delete()
     except Exception as e:
         logger.error(f"AI advice error: {e}")
         if update.message:
             await update.message.reply_text("AI maslahat xatosi yoki ma'lumot yetarli emas.")
+        if loading_message:
+            await loading_message.delete()
 
 async def show_motivation(update: Update):
     """Show motivational messages"""
