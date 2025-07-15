@@ -277,11 +277,9 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "\U0001F3C6 Rekorlar":
         return await show_records(update, user_id)
     elif text == "🤖 AI Byudjet":
-        await update.message.reply_text("AI byudjet funksiyasi uchun /ai_byudjet buyrug'ini yuboring yoki shu komandani bosing.")
-        return ConversationHandler.END
+        return await ai_budget_start(update, context)
     elif text == "🎯 AI Maqsad":
-        await update.message.reply_text("AI maqsad funksiyasi uchun /ai_maqsad buyrug'ini yuboring yoki shu komandani bosing.")
-        return ConversationHandler.END
+        return await ai_goal_start(update, context)
     elif text == "\u2753 Yordam":
         return await help_command(update, context)
     else:
@@ -1045,7 +1043,7 @@ async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not hasattr(update.message, 'from_user') or not update.message.from_user:
         return
     if update.message.from_user.id != ADMIN_ID:
-        await update.message.reply_text("Sizda ruxsat yo‘q.", reply_markup=UNIVERSAL_MENU)
+        await update.message.reply_text("Sizda ruxsat yo'q.", reply_markup=UNIVERSAL_MENU)
         return
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -1067,14 +1065,14 @@ async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if row:
         most_active = f"{row[0] or ''} (@{row[1] or ''}) - {row[2]} ta tranzaksiya"
     else:
-        most_active = "Yo‘q"
+        most_active = "Yo'q"
     # Most recent user
     c.execute("SELECT first_name, username, joined_at FROM users ORDER BY joined_at DESC LIMIT 1")
     row = c.fetchone()
     if row:
         most_recent = f"{row[0] or ''} (@{row[1] or ''}) - {row[2]}"
     else:
-        most_recent = "Yo‘q"
+        most_recent = "Yo'q"
     # Most active day
     c.execute("""
         SELECT DATE(date), COUNT(*) as cnt
@@ -1087,13 +1085,13 @@ async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if row:
         most_active_day = f"{row[0]} - {row[1]} ta tranzaksiya"
     else:
-        most_active_day = "Yo‘q"
+        most_active_day = "Yo'q"
     conn.close()
     await update.message.reply_text(
         f"👥 Foydalanuvchilar soni: {user_count}\n"
         f"💸 Umumiy tranzaksiyalar: {transaction_count}\n"
         f"🏆 Eng faol foydalanuvchi: {most_active}\n"
-        f"🆕 Eng so‘nggi foydalanuvchi: {most_recent}\n"
+        f"🆕 Eng so'nggi foydalanuvchi: {most_recent}\n"
         f"📅 Eng faol kun: {most_active_day}"
     )
 
@@ -1104,7 +1102,7 @@ async def push_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not hasattr(update.message, 'from_user') or not update.message.from_user:
         return ConversationHandler.END
     if update.message.from_user.id != ADMIN_ID:
-        await update.message.reply_text("Sizda ruxsat yo‘q.", reply_markup=UNIVERSAL_MENU)
+        await update.message.reply_text("Sizda ruxsat yo'q.", reply_markup=UNIVERSAL_MENU)
         return ConversationHandler.END
     await update.message.reply_text(
         "📝 Push xabar mavzusini yoki qisqacha mazmunini kiriting:\n\nBekor qilish uchun /cancel yozing."
