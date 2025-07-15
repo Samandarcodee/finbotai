@@ -802,12 +802,59 @@ async def show_ai_analysis(update: Update, user_id: int):
     return
 
 async def show_ai_advice(update: Update, user_id: int):
-    """Show AI financial advice based on user data"""
-    if update.message:
-        await update.message.reply_text(
-            "🤖 Tez kunda AI xizmati qo'shiladi!\n\nMoliyaviy maslahatlar uchun kuting."
-        )
-    return
+    """Show AI financial advice based on user data using RapidAPI GPT-4."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        current_month = datetime.now().strftime("%Y-%m")
+        c.execute("""
+            SELECT 
+                SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
+                SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense
+            FROM transactions 
+            WHERE user_id = ? AND strftime('%Y-%m', date) = ?
+        """, (user_id, current_month))
+        month_data = c.fetchone()
+        c.execute("""
+            SELECT 
+                SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
+                SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense
+            FROM transactions 
+            WHERE user_id = ?
+        """, (user_id,))
+        total_data = c.fetchone()
+        c.execute("""
+            SELECT category, SUM(amount) 
+            FROM transactions 
+            WHERE user_id = ? AND type = 'expense' 
+            GROUP BY category 
+            ORDER BY SUM(amount) DESC 
+            LIMIT 3
+        """, (user_id,))
+        categories = [cat[0] for cat in c.fetchall()]
+        conn.close()
+        month_income = month_data[0] or 0
+        month_expense = month_data[1] or 0
+        total_income = total_data[0] or 0
+        total_expense = total_data[1] or 0
+        balance = total_income - total_expense
+        user_data = {
+            'balance': balance,
+            'income': month_income,
+            'expenses': month_expense,
+            'categories': categories
+        }
+        try:
+            advice = ai_service.get_financial_advice(user_data)
+            if update.message:
+                await update.message.reply_text(advice)
+        except Exception as e:
+            if update.message:
+                await update.message.reply_text(f"AI maslahat xatosi: {e}")
+    except Exception as e:
+        logger.error(f"AI advice error: {e}")
+        if update.message:
+            await update.message.reply_text("AI maslahat xatosi yoki ma'lumot yetarli emas.")
 
 async def show_motivation(update: Update):
     """Show motivational messages"""
