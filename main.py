@@ -821,7 +821,7 @@ async def show_ai_analysis(update: Update, user_id: int):
             {'type': t[0], 'amount': t[1], 'category': t[2], 'note': t[3], 'date': t[4]} for t in transactions
         ]
         try:
-            analysis = ai_service.analyze_spending_patterns(formatted_transactions)
+            analysis = await ai_service.analyze_spending_patterns(formatted_transactions)
             analysis = analysis.replace('**', '') if analysis else analysis
             if update.message:
                 await update.message.reply_text(f"📊 <b>AI tahlil natijasi:</b>\n\n{analysis}", reply_markup=UNIVERSAL_MENU, parse_mode=ParseMode.HTML)
@@ -884,7 +884,7 @@ async def show_ai_advice(update: Update, user_id: int):
             'categories': categories
         }
         try:
-            advice = ai_service.get_financial_advice(user_data)
+            advice = await ai_service.get_financial_advice(user_data)
             advice = advice.replace('**', '') if advice else advice
             if update.message:
                 await update.message.reply_text(f"🤖 <b>AI maslahat:</b>\n\n{advice}", reply_markup=UNIVERSAL_MENU, parse_mode=ParseMode.HTML)
@@ -1119,7 +1119,7 @@ async def push_topic_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await update.message.reply_text("⏳ AI push xabar matnini tayyorlamoqda...")
     # AI orqali push matnini generatsiya qilish
     prompt = f"Foydalanuvchilarga motivatsion va foydali push xabar yozing. Mavzu yoki qisqacha mazmun: {topic}. Xabar qisqa, aniq va ijobiy bo'lsin. Til: o'zbek."
-    ai_text = ai_service.get_financial_advice({'topic': topic, 'mode': 'push'})
+    ai_text = await ai_service.get_financial_advice({'topic': topic, 'mode': 'push'})
     ai_text = ai_text.replace('**', '') if ai_text else ai_text
     if hasattr(context, 'user_data') and context.user_data is not None:
         context.user_data['push_text'] = ai_text
@@ -1208,7 +1208,7 @@ async def ai_budget_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
         {'type': t[0], 'amount': t[1], 'category': t[2], 'note': t[3], 'date': t[4]} for t in transactions
     ]
     user_data = {'income': amount}
-    ai_text = ai_service.generate_budget_plan(user_data, transactions_list)
+    ai_text = await ai_service.generate_budget_plan(user_data, transactions_list)
     ai_text = ai_text.replace('**', '') if ai_text else ai_text
     if hasattr(context, 'user_data') and context.user_data is not None:
         context.user_data['ai_budget_result'] = ai_text
@@ -1328,7 +1328,7 @@ async def ai_goal_monitor(update: Update, context: ContextTypes.DEFAULT_TYPE):
         transactions_list = [
             {'type': t[0], 'amount': t[1], 'category': t[2], 'note': t[3], 'date': t[4]} for t in transactions
         ]
-        ai_text = ai_service.monitor_goal_progress(goal_data, transactions_list)
+        ai_text = await ai_service.monitor_goal_progress(goal_data, transactions_list)
         ai_text = ai_text.replace('**', '') if ai_text else ai_text
         await update.message.reply_text(f"🎯 <b>Maqsad monitoringi:</b>\n\n{ai_text}", reply_markup=UNIVERSAL_MENU, parse_mode=ParseMode.HTML)
         return ConversationHandler.END
