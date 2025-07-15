@@ -794,12 +794,45 @@ async def show_records(update: Update, user_id: int):
             await update.message.reply_text("❌ Rekordlarni ko'rishda xatolik.")
 
 async def show_ai_analysis(update: Update, user_id: int):
-    """Show AI-powered spending analysis"""
-    if update.message:
-        await update.message.reply_text(
-            "🤖 Tez kunda AI tahlil xizmati qo'shiladi!\n\nXarajatlar tahlili uchun kuting."
-        )
-    return
+    """Show AI-powered spending analysis using RapidAPI GPT-4."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("""
+            SELECT type, amount, category, note, date 
+            FROM transactions 
+            WHERE user_id = ? 
+            ORDER BY date DESC 
+            LIMIT 50
+        """, (user_id,))
+        transactions = c.fetchall()
+        conn.close()
+        if not transactions:
+            if update.message:
+                await update.message.reply_text(
+                    "📊 AI Tahlil\n\nTahlil qilish uchun tranzaksiyalar yo'q. Avval kirim yoki chiqim qo'shing!"
+                )
+            return
+        formatted_transactions = []
+        for t in transactions:
+            formatted_transactions.append({
+                'type': t[0],
+                'amount': t[1],
+                'category': t[2],
+                'note': t[3],
+                'date': t[4]
+            })
+        try:
+            analysis = ai_service.analyze_spending_patterns(formatted_transactions)
+            if update.message:
+                await update.message.reply_text(analysis)
+        except Exception as e:
+            if update.message:
+                await update.message.reply_text(f"AI tahlil xatosi: {e}")
+    except Exception as e:
+        logger.error(f"AI analysis error: {e}")
+        if update.message:
+            await update.message.reply_text("AI tahlil xatosi yoki ma'lumot yetarli emas.")
 
 async def show_ai_advice(update: Update, user_id: int):
     """Show AI financial advice based on user data using RapidAPI GPT-4."""
