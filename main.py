@@ -69,7 +69,8 @@ def init_db():
                     user_id INTEGER PRIMARY KEY,
                     first_name TEXT,
                     last_name TEXT,
-                    username TEXT
+                    username TEXT,
+                    joined_at TEXT DEFAULT (datetime('now'))
                 )''')
     c.execute('''CREATE TABLE IF NOT EXISTS user_settings (
                     user_id INTEGER PRIMARY KEY,
