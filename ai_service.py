@@ -51,4 +51,51 @@ class ai_service:
 
     @staticmethod
     def get_default_advice():
-        return "Moliyaviy maslahat: Har doim xarajatlaringizni nazorat qiling va tejashga harakat qiling." 
+        return "Moliyaviy maslahat: Har doim xarajatlaringizni nazorat qiling va tejashga harakat qiling."
+
+    @staticmethod
+    def generate_budget_plan(user_data, transactions):
+        """Generate a personalized budget plan in Uzbek using RapidAPI GPT-4."""
+        prompt = (
+            f"Foydalanuvchi ma'lumotlari: {user_data}. "
+            f"Tranzaksiyalar tarixi: {transactions}. "
+            "Foydalanuvchiga oylik daromad, xarajatlar va maqsadlar asosida optimal byudjet rejasini tuzib bering. "
+            "Reja qisqa, aniq va motivatsion bo'lsin. Til: o'zbek."
+        )
+        data = {
+            "messages": [
+                {"role": "user", "content": prompt}
+            ]
+        }
+        try:
+            response = requests.post(RAPIDAPI_URL, json=data, headers=HEADERS, timeout=30)
+            if response.status_code == 200:
+                result = response.json()
+                return result.get("result", "AI javobini olishda xatolik.")
+            else:
+                return f"AI xizmatida xatolik. Status: {response.status_code}, Javob: {response.text}"
+        except Exception as e:
+            return f"AI xizmatida xatolik: {e}"
+
+    @staticmethod
+    def monitor_goal_progress(goal_data, transactions):
+        """Monitor user's financial goal progress and give feedback in Uzbek using RapidAPI GPT-4."""
+        prompt = (
+            f"Foydalanuvchi maqsadi: {goal_data}. "
+            f"Tranzaksiyalar tarixi: {transactions}. "
+            "Foydalanuvchining maqsadga erishish progressini tahlil qiling va qisqa motivatsion yoki ogohlantiruvchi xabar bering. Til: o'zbek."
+        )
+        data = {
+            "messages": [
+                {"role": "user", "content": prompt}
+            ]
+        }
+        try:
+            response = requests.post(RAPIDAPI_URL, json=data, headers=HEADERS, timeout=30)
+            if response.status_code == 200:
+                result = response.json()
+                return result.get("result", "AI javobini olishda xatolik.")
+            else:
+                return f"AI xizmatida xatolik. Status: {response.status_code}, Javob: {response.text}"
+        except Exception as e:
+            return f"AI xizmatida xatolik: {e}" 

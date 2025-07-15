@@ -6,6 +6,7 @@ import os
 from datetime import datetime, timedelta
 import random
 from ai_service import ai_service
+from telegram.constants import ParseMode
 
 # ==== CONFIG ====
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -19,15 +20,18 @@ ASK_SUPPORT = 100  # yangi state
 MESSAGES = {
     "uz": {
         "main_menu": "\U0001F3E0 Bosh menyu",
-        "invalid_choice": "\u274c Noto'g'ri tanlov. Qaytadan tanlang."
+        "invalid_choice": "\u274c Noto'g'ri tanlov. Qaytadan tanlang.",
+        "currencies": ["💰 Valyutani o'zgartirish", "💰 Изменить валюту", "💰 Change currency"]
     },
     "ru": {
         "main_menu": "\U0001F3E0 \u0413\u043B\u0430\u0432\u043D\u043E\u0435 \u043C\u0435\u043D\u044E",
-        "invalid_choice": "\u274c \u041D\u0435\u0432\u0435\u0440\u043D\u044B\u0439 \u0432\u044B\u0431\u043E\u0440. \u041F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430, \u0432\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0441\u043D\u043E\u0432\u0430."
+        "invalid_choice": "\u274c \u041D\u0435\u0432\u0435\u0440\u043D\u044B\u0439 \u0432\u044B\u0431\u043E\u0440. \u041F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430, \u0432\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0441\u043D\u043E\u0432\u0430.",
+        "currencies": ["💰 Изменить валюту", "💰 Change currency"]
     },
     "en": {
         "main_menu": "\U0001F3E0 Main menu",
-        "invalid_choice": "\u274c Invalid choice. Please try again."
+        "invalid_choice": "\u274c Invalid choice. Please try again.",
+        "currencies": ["💰 Change currency"]
     }
 }
 
@@ -38,6 +42,7 @@ MAIN_MENU_KEYBOARD = [
     ["\U0001F4CB Kategoriyalar", "\U0001F3AF Byudjet"],
     ["\U0001F4E4 Export", "\U0001F3C6 Rekorlar"],
     ["\U0001F916 AI maslahat", "\U0001F4CA AI Tahlil"],
+    ["🤖 AI Byudjet", "🎯 AI Maqsad"],
     ["\u2753 Yordam"]
 ]
 
@@ -48,7 +53,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ==== DATABASE INITIALIZATION ====
+# ==== DATABASE INITIALIZATION (add goals table) ====
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -57,15 +62,33 @@ def init_db():
                     type TEXT,
                     amount INTEGER,
                     note TEXT,
-                    category TEXT DEFAULT 'Boshqa',
-                    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    category TEXT,
+                    date TEXT DEFAULT (datetime('now'))
+                )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS users (
+                    user_id INTEGER PRIMARY KEY,
+                    first_name TEXT,
+                    last_name TEXT,
+                    username TEXT
+                )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS user_settings (
+                    user_id INTEGER PRIMARY KEY,
+                    language TEXT DEFAULT 'uz',
+                    currency TEXT DEFAULT "so'm"
                 )''')
     c.execute('''CREATE TABLE IF NOT EXISTS budgets (
                     user_id INTEGER,
                     category TEXT,
                     amount INTEGER,
-                    month TEXT,
-                    PRIMARY KEY (user_id, category, month)
+                    month TEXT
+                )''')
+    # New: goals table
+    c.execute('''CREATE TABLE IF NOT EXISTS goals (
+                    user_id INTEGER,
+                    goal_name TEXT,
+                    target_amount INTEGER,
+                    deadline TEXT,
+                    created_at TEXT DEFAULT (datetime('now'))
                 )''')
     conn.commit()
     conn.close()
@@ -103,37 +126,50 @@ def validate_amount(amount_str):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
-    from_user = getattr(update.message, 'from_user', None)
+    user = getattr(update.message, 'from_user', None)
+    if not user:
+        return
+    # Register user if not exists
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("INSERT OR IGNORE INTO users (user_id, first_name, last_name, username) VALUES (?, ?, ?, ?)",
+              (user.id, user.first_name, user.last_name, user.username))
+    conn.commit()
+    conn.close()
+    from_user = user
     if not from_user or not hasattr(from_user, 'id'):
         return
     user_id = getattr(from_user, 'id', None)
     user_name = getattr(from_user, 'first_name', 'Foydalanuvchi')
     if user_id is None:
         return
-    # Initialize user settings
-    # get_user_settings(user_id) # Removed as per edit hint
-    reply_markup = ReplyKeyboardMarkup(MAIN_MENU_KEYBOARD, resize_keyboard=True)
-    welcome_text = f"""👋 Assalomu alaykum, {user_name}!
-
-    Men FinBot AI - sizning aqlli moliyaviy yordamchingiz! 💰
-
-    🎯 Asosiy funksiyalar:
-    • 💰 Kirim va chiqimlarni qo'shish
-    • 📊 Balans va tahlil ko'rish  
-    • 📋 Kategoriyalar bo'yicha hisobot
-    • 🎯 Byudjet nazorati
-    • 📈 Moliyaviy maslahatlar
-
-    Quyidagi tugmalardan foydalaning:"""
-    await update.message.reply_text(welcome_text, reply_markup=reply_markup)
+    welcome_text = (
+        f"👋 Salom, {user_name}!\n\n"
+        "Men FinBot AI — sizning aqlli moliyaviy yordamchingizman!\n\n"
+        "Asosiy imkoniyatlar:\n"
+        "• Kirim va chiqimlarni tez kiritish\n"
+        "• Balans va tahlil\n"
+        "• Byudjet va maqsadlar\n"
+        "• AI maslahat va tahlil\n\n"
+        "Quyidagi tugmalardan foydalaning yoki savol bering!"
+    )
+    await update.message.reply_text(welcome_text, reply_markup=ReplyKeyboardMarkup(MAIN_MENU_KEYBOARD, resize_keyboard=True))
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return ConversationHandler.END
-    await update.message.reply_text(
-        "Yordam uchun savolingizni yozing. Admin sizga javob beradi.\n\nBekor qilish uchun /cancel yozing."
+    help_text = (
+        "ℹ️ <b>Yordam</b>\n\n"
+        "• <b>Kirim/Chiqim qo'shish</b> — mos tugmani bosing va miqdorni kiriting.\n"
+        "• <b>Balans/Tahlil</b> — moliyaviy holatingizni ko'ring.\n"
+        "• <b>AI maslahat</b> — shaxsiy moliyaviy tavsiya oling.\n"
+        "• <b>AI Byudjet</b> — AI yordamida byudjet tuzing.\n"
+        "• <b>AI Maqsad</b> — maqsad qo'ying va monitoring qiling.\n\n"
+        "❌ <b>Bekor qilish</b> — istalgan vaqtda dialogni to'xtatadi.\n"
+        "🏠 <b>Bosh menyu</b> — asosiy menyuga qaytadi."
     )
-    return ASK_SUPPORT
+    await update.message.reply_text(help_text, reply_markup=ReplyKeyboardMarkup(MAIN_MENU_KEYBOARD, resize_keyboard=True), parse_mode=ParseMode.HTML)
+    return ConversationHandler.END
 
 async def handle_support_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not hasattr(update.message, 'from_user') or not update.message.text:
@@ -179,8 +215,7 @@ async def admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return ConversationHandler.END
-    reply_markup = ReplyKeyboardMarkup(MAIN_MENU_KEYBOARD, resize_keyboard=True)
-    await update.message.reply_text("❌ Amal bekor qilindi. Boshqa funksiyani tanlang:", reply_markup=reply_markup)
+    await update.message.reply_text("❌ Amal bekor qilindi.", reply_markup=ReplyKeyboardMarkup(MAIN_MENU_KEYBOARD, resize_keyboard=True))
     return ConversationHandler.END
 
 # ==== HANDLERS ====
@@ -189,7 +224,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     text = update.message.text
     user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
-    if text.lower() in ["/start", "/cancel", "\U0001F3E0 Bosh menyu", "\U0001F3E0 \u0413\u043B\u0430\u0432\u043D\u043E\u0435 \u043C\u0435\u043D\u044E", "\U0001F3E0 Main menu"]:
+    if text.lower() in ["/start", "/cancel", "\U0001F3E0 Bosh menyu", "\U0001F3E0 \u0413\u043B\u0430\u0432\u043D\u043E\u0435 \u043C\u0435\u043D\u044E", "\U0001F3E0 Main menu", "🏠 Bosh menyu"]:
         return await start(update, context)
     if user_id is None:
         return ConversationHandler.END
@@ -200,12 +235,12 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ["\U0001F48A Sog'liq", "\U0001F4DA Ta'lim"],
             ["\U0001F3AE O'yin-kulgi", "\U0001F455 Kiyim"],
             ["\U0001F3E0 Uy", "\U0001F4F1 Aloqa"],
-            ["\U0001F4B3 Boshqa", "\U0001F519 Orqaga"]
+            ["\U0001F4B3 Boshqa", "\U0001F519 Orqaga"],
+            ["❌ Bekor qilish", "🏠 Bosh menyu"]
         ]
         category_markup = ReplyKeyboardMarkup(categories_keyboard, resize_keyboard=True, one_time_keyboard=True)
         await update.message.reply_text(
-            "\U0001F4B0 KIRIM QO'SHISH\n\n"
-            "Kategoriyani tanlang:",
+            "💰 Kirim uchun kategoriya tanlang:",
             reply_markup=category_markup
         )
         return 4
@@ -215,12 +250,12 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ["\U0001F48A Sog'liq", "\U0001F4DA Ta'lim"],
             ["\U0001F3AE O'yin-kulgi", "\U0001F455 Kiyim"],
             ["\U0001F3E0 Uy", "\U0001F4F1 Aloqa"],
-            ["\U0001F4B3 Boshqa", "\U0001F519 Orqaga"]
+            ["\U0001F4B3 Boshqa", "\U0001F519 Orqaga"],
+            ["❌ Bekor qilish", "🏠 Bosh menyu"]
         ]
         category_markup = ReplyKeyboardMarkup(categories_keyboard, resize_keyboard=True, one_time_keyboard=True)
         await update.message.reply_text(
-            "\U0001F4B8 CHIQIM QO'SHISH\n\n"
-            "Kategoriyani tanlang:",
+            "💸 Chiqim uchun kategoriya tanlang:",
             reply_markup=category_markup
         )
         return 3
@@ -240,11 +275,19 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await export_data(update, user_id)
     elif text == "\U0001F3C6 Rekorlar":
         return await show_records(update, user_id)
+    elif text == "🤖 AI Byudjet":
+        return await ai_budget_start(update, context)
+    elif text == "🎯 AI Maqsad":
+        return await ai_goal_start(update, context)
     elif text == "\u2753 Yordam":
         return await help_command(update, context)
     else:
-        await update.message.reply_text(MESSAGES["uz"]["invalid_choice"])
+        await update.message.reply_text(MESSAGES["uz"]["invalid_choice"], reply_markup=ReplyKeyboardMarkup(MAIN_MENU_KEYBOARD, resize_keyboard=True))
         return ConversationHandler.END
+
+# Universal navigation keyboards
+UNIVERSAL_CANCEL = ReplyKeyboardMarkup([["❌ Bekor qilish"], ["🏠 Bosh menyu"]], resize_keyboard=True, one_time_keyboard=True)
+UNIVERSAL_MENU = ReplyKeyboardMarkup(MAIN_MENU_KEYBOARD, resize_keyboard=True)
 
 # BALANS
 async def show_balance(update: Update, user_id: int):
@@ -398,12 +441,12 @@ async def add_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # currency = settings['currency'] # Removed as per edit hint
     text = update.message.text.strip()
     
-    if text.lower() in ['/cancel', 'bekor', 'cancel']:
+    if text.lower() in ['/cancel', 'bekor', 'cancel', '❌ bekor qilish', '🏠 bosh menyu']:
         return await cancel(update, context)
     
     amount, error = validate_amount(text)
     if error:
-        await update.message.reply_text(f"❌ {error}\n\nQaytadan kiriting yoki /cancel yozing")
+        await update.message.reply_text(f"❌ {error}\n\nQaytadan kiriting yoki 'Bekor qilish' tugmasini bosing.", reply_markup=UNIVERSAL_CANCEL)
         return 1
     
     # Extract note from text
@@ -428,12 +471,12 @@ async def add_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 💡 Davom eting - har bir kirim muhim!"""
         
-        await update.message.reply_text(success_text)
+        await update.message.reply_text(success_text, reply_markup=UNIVERSAL_MENU)
         return ConversationHandler.END
         
     except Exception as e:
         logger.error(f"Income add error: {e}")
-        await update.message.reply_text("❌ Xatolik yuz berdi. Qaytadan urinib ko'ring.")
+        await update.message.reply_text("❌ Xatolik yuz berdi. Qaytadan urinib ko'ring.", reply_markup=UNIVERSAL_MENU)
         return ConversationHandler.END
 
 async def income_category_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -445,7 +488,7 @@ async def income_category_selected(update: Update, context: ContextTypes.DEFAULT
     if user_id is None:
         return ConversationHandler.END
     
-    if text == "\U0001F519 Orqaga":
+    if text == "\U0001F519 Orqaga" or text == "❌ Bekor qilish" or text == "🏠 Bosh menyu":
         return await cancel(update, context)
     
     income_category_map = {
@@ -460,26 +503,13 @@ async def income_category_selected(update: Update, context: ContextTypes.DEFAULT
         "\U0001F4B3 Boshqa": "Boshqa"
     }
     
-    selected_category = income_category_map[text] if isinstance(income_category_map, dict) and text in income_category_map else "Boshqa kirim"
+    selected_category = income_category_map[text] if text in income_category_map else "Boshqa kirim"
     if hasattr(context, 'user_data') and context.user_data is not None:
         context.user_data['selected_income_category'] = selected_category
     
-    keyboard = [
-        ["\U0001F4B0 Kirim qo'shish", "\U0001F4B8 Chiqim qo'shish"],
-        ["\U0001F4CA Balans", "\U0001F4C8 Tahlil"],
-        ["\U0001F4CB Kategoriyalar", "\U0001F3AF Byudjet"],
-        ["\U0001F4E4 Export", "\U0001F3C6 Rekorlar"],
-        ["\U0001F916 AI maslahat", "\U0001F4CA AI Tahlil"],
-        ["\u2753 Yordam"]
-    ]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    
     await update.message.reply_text(
-        f"✅ Kategoriya tanlandi: {selected_category}\n\n"
-        f"💰 Endi kirim miqdorini kiriting:\n"
-        f"Masalan: 50000 ish haqi\n\n"
-        f"Bekor qilish uchun /cancel yozing",
-        reply_markup=reply_markup
+        f"✅ Kategoriya: {selected_category}\n\nKirim miqdorini kiriting (masalan: 50000 ish haqi):",
+        reply_markup=UNIVERSAL_CANCEL
     )
     return 1
 
@@ -492,7 +522,7 @@ async def expense_category_selected(update: Update, context: ContextTypes.DEFAUL
     if user_id is None:
         return ConversationHandler.END
     
-    if text == "\U0001F519 Orqaga":
+    if text == "\U0001F519 Orqaga" or text == "❌ Bekor qilish" or text == "🏠 Bosh menyu":
         return await cancel(update, context)
     
     expense_category_map = {
@@ -507,26 +537,13 @@ async def expense_category_selected(update: Update, context: ContextTypes.DEFAUL
         "\U0001F4B3 Boshqa": "Boshqa"
     }
     
-    selected_category = expense_category_map[text] if isinstance(expense_category_map, dict) and text in expense_category_map else "Boshqa"
+    selected_category = expense_category_map[text] if text in expense_category_map else "Boshqa"
     if hasattr(context, 'user_data') and context.user_data is not None:
         context.user_data['selected_expense_category'] = selected_category
     
-    keyboard = [
-        ["\U0001F4B0 Kirim qo'shish", "\U0001F4B8 Chiqim qo'shish"],
-        ["\U0001F4CA Balans", "\U0001F4C8 Tahlil"],
-        ["\U0001F4CB Kategoriyalar", "\U0001F3AF Byudjet"],
-        ["\U0001F4E4 Export", "\U0001F3C6 Rekorlar"],
-        ["\U0001F916 AI maslahat", "\U0001F4CA AI Tahlil"],
-        ["\u2753 Yordam"]
-    ]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    
     await update.message.reply_text(
-        f"✅ Kategoriya tanlandi: {selected_category}\n\n"
-        f"💸 Endi chiqim miqdorini kiriting:\n"
-        f"Masalan: 25000 kofe\n\n"
-        f"Bekor qilish uchun /cancel yozing",
-        reply_markup=reply_markup
+        f"✅ Kategoriya: {selected_category}\n\nChiqim miqdorini kiriting (masalan: 25000 kofe):",
+        reply_markup=UNIVERSAL_CANCEL
     )
     return 2
 
@@ -544,12 +561,12 @@ async def add_expense(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     selected_category = context.user_data['selected_expense_category'] if hasattr(context, 'user_data') and isinstance(context.user_data, dict) and 'selected_expense_category' in context.user_data else 'Boshqa'
     
-    if text.lower() in ['/cancel', 'bekor', 'cancel']:
+    if text.lower() in ['/cancel', 'bekor', 'cancel', '❌ bekor qilish', '🏠 bosh menyu']:
         return await cancel(update, context)
     
     amount, error = validate_amount(text)
     if error:
-        await update.message.reply_text(f"❌ {error}\n\nQaytadan kiriting yoki /cancel yozing")
+        await update.message.reply_text(f"❌ {error}\n\nQaytadan kiriting yoki 'Bekor qilish' tugmasini bosing.", reply_markup=UNIVERSAL_CANCEL)
         return 2
     
     # Extract note from text
@@ -573,12 +590,12 @@ async def add_expense(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 💡 Xarajatlaringizni nazorat qiling!"""
         
-        await update.message.reply_text(success_text)
+        await update.message.reply_text(success_text, reply_markup=UNIVERSAL_MENU)
         return ConversationHandler.END
         
     except Exception as e:
         logger.error(f"Expense add error: {e}")
-        await update.message.reply_text("❌ Xatolik yuz berdi. Qaytadan urinib ko'ring.")
+        await update.message.reply_text("❌ Xatolik yuz berdi. Qaytadan urinib ko'ring.", reply_markup=UNIVERSAL_MENU)
         return ConversationHandler.END
 
 # ==== ADDITIONAL FEATURES ====
@@ -625,30 +642,19 @@ async def show_categories(update: Update, user_id: int):
 
 async def show_budget_status(update: Update, user_id: int):
     try:
-        # settings = get_user_settings(user_id) # Removed as per edit hint
-        # currency = settings['currency'] # Removed as per edit hint
         from datetime import datetime
         current_month = datetime.now().strftime("%Y-%m")
-        
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
-        
-        # Get budgets for current month
         c.execute("SELECT category, amount FROM budgets WHERE user_id = ? AND month = ?", (user_id, current_month))
         budgets = dict(c.fetchall())
-        
         if not budgets:
             if update.message:
                 await update.message.reply_text(
-                    "🎯 BYUDJET\n\n"
-                    "Hali byudjet belgilanmagan.\n\n"
-                    "Byudjet belgilash uchun:\n"
-                    "/setbudget [kategoriya] [miqdor]\n"
-                    "Masalan: /setbudget Oziq-ovqat 500000"
+                    "🎯 Byudjet belgilanmagan. /setbudget orqali byudjet qo'shing.",
+                    reply_markup=UNIVERSAL_MENU
                 )
             return
-        
-        # Get spending by category this month
         c.execute("""
             SELECT category, SUM(amount) 
             FROM transactions 
@@ -657,33 +663,24 @@ async def show_budget_status(update: Update, user_id: int):
         """, (user_id, current_month))
         spending = dict(c.fetchall())
         conn.close()
-        
-        text = f"🎯 BYUDJET HOLATI ({current_month}):\n\n"
-        
+        text = f"🎯 <b>Byudjet holati ({current_month}):</b>\n\n"
         for category, budget_amount in budgets.items():
             spent = spending.get(category, 0)
             remaining = budget_amount - spent
             percentage = (spent / budget_amount * 100) if budget_amount > 0 else 0
-            
             if percentage < 70:
                 status = "🟢"
             elif percentage < 90:
                 status = "🟡"
             else:
                 status = "🔴"
-            
-            text += f"{status} {category}:\n"
-            text += f"   💰 Byudjet: {format_currency(budget_amount)}\n"
-            text += f"   💸 Sarflangan: {format_currency(spent)} ({percentage:.1f}%)\n"
-            text += f"   💵 Qolgan: {format_currency(remaining)}\n\n"
-        
+            text += f"{status} <b>{category}</b>\nByudjet: {format_currency(budget_amount)}\nSarflangan: {format_currency(spent)} ({percentage:.1f}%)\nQolgan: {format_currency(remaining)}\n\n"
         if update.message:
-            await update.message.reply_text(text)
-        
+            await update.message.reply_text(text, reply_markup=UNIVERSAL_MENU, parse_mode=ParseMode.HTML)
     except Exception as e:
         logger.error(f"Budget error: {e}")
         if update.message:
-            await update.message.reply_text("❌ Byudjetni ko'rishda xatolik.")
+            await update.message.reply_text("❌ Byudjetni ko'rishda xatolik.", reply_markup=UNIVERSAL_MENU)
 
 async def export_data(update: Update, user_id: int):
     try:
@@ -798,7 +795,7 @@ async def show_ai_analysis(update: Update, user_id: int):
     loading_message = None
     try:
         if update.message:
-            loading_message = await update.message.reply_text("⏳ AI javobi tayyorlanmoqda...")
+            loading_message = await update.message.reply_text("⏳ AI tahlil tayyorlanmoqda...", reply_markup=UNIVERSAL_CANCEL)
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("""
@@ -813,35 +810,29 @@ async def show_ai_analysis(update: Update, user_id: int):
         if not transactions:
             if update.message:
                 await update.message.reply_text(
-                    "📊 AI Tahlil\n\nTahlil qilish uchun tranzaksiyalar yo'q. Avval kirim yoki chiqim qo'shing!"
+                    "📊 AI tahlil uchun tranzaksiyalar yo'q. Avval kirim yoki chiqim qo'shing!",
+                    reply_markup=UNIVERSAL_MENU
                 )
             if loading_message:
                 await loading_message.delete()
             return
-        formatted_transactions = []
-        for t in transactions:
-            formatted_transactions.append({
-                'type': t[0],
-                'amount': t[1],
-                'category': t[2],
-                'note': t[3],
-                'date': t[4]
-            })
+        formatted_transactions = [
+            {'type': t[0], 'amount': t[1], 'category': t[2], 'note': t[3], 'date': t[4]} for t in transactions
+        ]
         try:
             analysis = ai_service.analyze_spending_patterns(formatted_transactions)
-            # Remove all '**' from the AI response
             analysis = analysis.replace('**', '') if analysis else analysis
             if update.message:
-                await update.message.reply_text(analysis)
+                await update.message.reply_text(f"📊 <b>AI tahlil natijasi:</b>\n\n{analysis}", reply_markup=UNIVERSAL_MENU, parse_mode=ParseMode.HTML)
         except Exception as e:
             if update.message:
-                await update.message.reply_text(f"AI tahlil xatosi: {e}")
+                await update.message.reply_text(f"AI tahlil xatosi: {e}", reply_markup=UNIVERSAL_MENU)
         if loading_message:
             await loading_message.delete()
     except Exception as e:
         logger.error(f"AI analysis error: {e}")
         if update.message:
-            await update.message.reply_text("AI tahlil xatosi yoki ma'lumot yetarli emas.")
+            await update.message.reply_text("AI tahlil xatosi yoki ma'lumot yetarli emas.", reply_markup=UNIVERSAL_MENU)
         if loading_message:
             await loading_message.delete()
 
@@ -850,7 +841,7 @@ async def show_ai_advice(update: Update, user_id: int):
     loading_message = None
     try:
         if update.message:
-            loading_message = await update.message.reply_text("⏳ AI javobi tayyorlanmoqda...")
+            loading_message = await update.message.reply_text("⏳ AI javobi tayyorlanmoqda...", reply_markup=UNIVERSAL_CANCEL)
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         current_month = datetime.now().strftime("%Y-%m")
@@ -893,19 +884,18 @@ async def show_ai_advice(update: Update, user_id: int):
         }
         try:
             advice = ai_service.get_financial_advice(user_data)
-            # Remove all '**' from the AI response
             advice = advice.replace('**', '') if advice else advice
             if update.message:
-                await update.message.reply_text(advice)
+                await update.message.reply_text(f"🤖 <b>AI maslahat:</b>\n\n{advice}", reply_markup=UNIVERSAL_MENU, parse_mode=ParseMode.HTML)
         except Exception as e:
             if update.message:
-                await update.message.reply_text(f"AI maslahat xatosi: {e}")
+                await update.message.reply_text(f"AI maslahat xatosi: {e}", reply_markup=UNIVERSAL_MENU)
         if loading_message:
             await loading_message.delete()
     except Exception as e:
         logger.error(f"AI advice error: {e}")
         if update.message:
-            await update.message.reply_text("AI maslahat xatosi yoki ma'lumot yetarli emas.")
+            await update.message.reply_text("AI maslahat xatosi yoki ma'lumot yetarli emas.", reply_markup=UNIVERSAL_MENU)
         if loading_message:
             await loading_message.delete()
 
@@ -1048,6 +1038,314 @@ async def delete_data_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("❌ Noto'g'ri tanlov. Qaytadan tanlang.")
         return 7
 
+async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not hasattr(update.message, 'from_user') or not update.message.from_user:
+        return
+    if update.message.from_user.id != ADMIN_ID:
+        await update.message.reply_text("Sizda ruxsat yo‘q.", reply_markup=UNIVERSAL_MENU)
+        return
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    # Total users
+    c.execute("SELECT COUNT(*) FROM users")
+    user_count = c.fetchone()[0]
+    # Total transactions
+    c.execute("SELECT COUNT(*) FROM transactions")
+    transaction_count = c.fetchone()[0]
+    # Most active user
+    c.execute("""
+        SELECT u.first_name, u.username, COUNT(t.user_id) as cnt
+        FROM users u LEFT JOIN transactions t ON u.user_id = t.user_id
+        GROUP BY u.user_id
+        ORDER BY cnt DESC
+        LIMIT 1
+    """)
+    row = c.fetchone()
+    if row:
+        most_active = f"{row[0] or ''} (@{row[1] or ''}) - {row[2]} ta tranzaksiya"
+    else:
+        most_active = "Yo‘q"
+    # Most recent user
+    c.execute("SELECT first_name, username, joined_at FROM users ORDER BY joined_at DESC LIMIT 1")
+    row = c.fetchone()
+    if row:
+        most_recent = f"{row[0] or ''} (@{row[1] or ''}) - {row[2]}"
+    else:
+        most_recent = "Yo‘q"
+    # Most active day
+    c.execute("""
+        SELECT DATE(date), COUNT(*) as cnt
+        FROM transactions
+        GROUP BY DATE(date)
+        ORDER BY cnt DESC
+        LIMIT 1
+    """)
+    row = c.fetchone()
+    if row:
+        most_active_day = f"{row[0]} - {row[1]} ta tranzaksiya"
+    else:
+        most_active_day = "Yo‘q"
+    conn.close()
+    await update.message.reply_text(
+        f"👥 Foydalanuvchilar soni: {user_count}\n"
+        f"💸 Umumiy tranzaksiyalar: {transaction_count}\n"
+        f"🏆 Eng faol foydalanuvchi: {most_active}\n"
+        f"🆕 Eng so‘nggi foydalanuvchi: {most_recent}\n"
+        f"📅 Eng faol kun: {most_active_day}"
+    )
+
+# ==== PUSH NOTIFICATION (ADMIN) ====
+PUSH_TOPIC, PUSH_CONFIRM = range(200, 202)
+
+async def push_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not hasattr(update.message, 'from_user') or not update.message.from_user:
+        return ConversationHandler.END
+    if update.message.from_user.id != ADMIN_ID:
+        await update.message.reply_text("Sizda ruxsat yo‘q.", reply_markup=UNIVERSAL_MENU)
+        return ConversationHandler.END
+    await update.message.reply_text(
+        "📝 Push xabar mavzusini yoki qisqacha mazmunini kiriting:\n\nBekor qilish uchun /cancel yozing."
+    )
+    return PUSH_TOPIC
+
+async def push_topic_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return ConversationHandler.END
+    topic = update.message.text.strip()
+    if topic.lower() in ["/cancel", "bekor", "cancel"]:
+        await update.message.reply_text("❌ Bekor qilindi.")
+        return ConversationHandler.END
+    await update.message.reply_text("⏳ AI push xabar matnini tayyorlamoqda...")
+    # AI orqali push matnini generatsiya qilish
+    prompt = f"Foydalanuvchilarga motivatsion va foydali push xabar yozing. Mavzu yoki qisqacha mazmun: {topic}. Xabar qisqa, aniq va ijobiy bo'lsin. Til: o'zbek."
+    ai_text = ai_service.get_financial_advice({'topic': topic, 'mode': 'push'})
+    ai_text = ai_text.replace('**', '') if ai_text else ai_text
+    if hasattr(context, 'user_data') and context.user_data is not None:
+        context.user_data['push_text'] = ai_text
+    await update.message.reply_text(
+        f"AI tomonidan tayyorlangan push xabar:\n\n{ai_text}\n\nYuborishni tasdiqlaysizmi? (Ha/Yo'q)",
+        parse_mode=ParseMode.HTML
+    )
+    return PUSH_CONFIRM
+
+async def push_confirm_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return ConversationHandler.END
+    text = update.message.text.strip().lower()
+    if text in ["yo'q", "yoq", "bekor", "/cancel", "cancel"]:
+        await update.message.reply_text("❌ Bekor qilindi.")
+        return ConversationHandler.END
+    if text in ["ha", "yes", "ok", "yubor", "tasdiqla"]:
+        push_text = None
+        if hasattr(context, 'user_data') and context.user_data is not None:
+            push_text = context.user_data.get('push_text', None)
+        if not push_text:
+            await update.message.reply_text("Xabar topilmadi.")
+            return ConversationHandler.END
+        # Barcha user_id larni olish va xabar yuborish
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT user_id FROM users")
+        user_ids = [row[0] for row in c.fetchall()]
+        conn.close()
+        count = 0
+        for uid in user_ids:
+            try:
+                await context.bot.send_message(chat_id=uid, text=push_text)
+                count += 1
+            except Exception as e:
+                continue
+        await update.message.reply_text(f"✅ Push xabar {count} foydalanuvchiga yuborildi!")
+        return ConversationHandler.END
+    else:
+        await update.message.reply_text("Iltimos, 'Ha' yoki 'Yo'q' deb javob bering.")
+        return PUSH_CONFIRM
+
+# ==== ConversationHandler for PUSH ====
+push_conv_handler = ConversationHandler(
+    entry_points=[CommandHandler("push", push_command)],
+    states={
+        PUSH_TOPIC: [MessageHandler(filters.TEXT & ~filters.COMMAND, push_topic_handler)],
+        PUSH_CONFIRM: [MessageHandler(filters.TEXT & ~filters.COMMAND, push_confirm_handler)],
+    },
+    fallbacks=[CommandHandler("cancel", cancel)],
+)
+
+# ==== AI-BASED BUDGET PLANNING ====
+AI_BUDGET_START, AI_BUDGET_INCOME, AI_BUDGET_CONFIRM = range(300, 303)
+
+async def ai_budget_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not hasattr(update.message, 'from_user'):
+        return ConversationHandler.END
+    await update.message.reply_text(
+        "AI asosida byudjet tuzish uchun oylik daromadingizni kiriting (so'mda):\n\nBekor qilish uchun /cancel yozing."
+    )
+    return AI_BUDGET_INCOME
+
+async def ai_budget_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return ConversationHandler.END
+    text = update.message.text.strip()
+    if text.lower() in ["/cancel", "bekor", "cancel"]:
+        await update.message.reply_text("❌ Bekor qilindi.")
+        return ConversationHandler.END
+    amount, error = validate_amount(text)
+    if error:
+        await update.message.reply_text(f"❌ {error}\n\nQaytadan kiriting yoki /cancel yozing")
+        return AI_BUDGET_INCOME
+    if hasattr(context, 'user_data') and context.user_data is not None:
+        context.user_data['ai_budget_income'] = amount
+    await update.message.reply_text("AI byudjet tuzmoqda, iltimos kuting...")
+    # Get user_id and transactions
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT type, amount, category, note, date FROM transactions WHERE user_id = ? ORDER BY date DESC LIMIT 50", (user_id,))
+    transactions = c.fetchall()
+    conn.close()
+    transactions_list = [
+        {'type': t[0], 'amount': t[1], 'category': t[2], 'note': t[3], 'date': t[4]} for t in transactions
+    ]
+    user_data = {'income': amount}
+    ai_text = ai_service.generate_budget_plan(user_data, transactions_list)
+    ai_text = ai_text.replace('**', '') if ai_text else ai_text
+    if hasattr(context, 'user_data') and context.user_data is not None:
+        context.user_data['ai_budget_result'] = ai_text
+    reply_markup = ReplyKeyboardMarkup([["Ha"], ["Yo'q"]], resize_keyboard=True, one_time_keyboard=True)
+    await update.message.reply_text(f"AI byudjet reja:\n\n{ai_text}\n\nYana bir bor ko'rib chiqilsinmi? (Ha/Yo'q)", reply_markup=reply_markup)
+    return AI_BUDGET_CONFIRM
+
+async def ai_budget_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return ConversationHandler.END
+    text = update.message.text.strip().lower()
+    if text in ["yo'q", "yoq", "bekor", "/cancel", "cancel"]:
+        await update.message.reply_text("❌ Bekor qilindi.")
+        return ConversationHandler.END
+    if text in ["ha", "yes", "ok", "tasdiqla"]:
+        ai_text = None
+        if hasattr(context, 'user_data') and context.user_data is not None:
+            ai_text = context.user_data.get('ai_budget_result', None)
+        if ai_text:
+            reply_markup = ReplyKeyboardMarkup(MAIN_MENU_KEYBOARD, resize_keyboard=True)
+            await update.message.reply_text(f"✅ AI byudjet reja saqlandi (yoki qayta ko'rib chiqildi):\n\n{ai_text}", reply_markup=reply_markup)
+        return ConversationHandler.END
+    else:
+        await update.message.reply_text("Iltimos, 'Ha' yoki 'Yo'q' deb javob bering.")
+        return AI_BUDGET_CONFIRM
+
+ai_budget_conv_handler = ConversationHandler(
+    entry_points=[CommandHandler("ai_byudjet", ai_budget_start)],
+    states={
+        AI_BUDGET_INCOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, ai_budget_income)],
+        AI_BUDGET_CONFIRM: [MessageHandler(filters.TEXT & ~filters.COMMAND, ai_budget_confirm)],
+    },
+    fallbacks=[CommandHandler("cancel", cancel)],
+)
+
+# ==== AI-BASED GOAL SETTING & MONITORING ====
+AI_GOAL_NAME, AI_GOAL_AMOUNT, AI_GOAL_DEADLINE, AI_GOAL_MONITOR = range(310, 314)
+
+async def ai_goal_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not hasattr(update.message, 'from_user'):
+        return ConversationHandler.END
+    await update.message.reply_text(
+        "Moliyaviy maqsad qo'yish uchun maqsad nomini kiriting (masalan: '3 oyda 1 mln so'm tejash').\n\nBekor qilish uchun /cancel yozing."
+    )
+    return AI_GOAL_NAME
+
+async def ai_goal_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return ConversationHandler.END
+    text = update.message.text.strip()
+    if text.lower() in ["/cancel", "bekor", "cancel"]:
+        await update.message.reply_text("❌ Bekor qilindi.")
+        return ConversationHandler.END
+    if hasattr(context, 'user_data') and context.user_data is not None:
+        context.user_data['goal_name'] = text
+    await update.message.reply_text("Maqsad uchun umumiy miqdorni kiriting (so'mda):")
+    return AI_GOAL_AMOUNT
+
+async def ai_goal_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return ConversationHandler.END
+    text = update.message.text.strip()
+    amount, error = validate_amount(text)
+    if error:
+        await update.message.reply_text(f"❌ {error}\n\nQaytadan kiriting yoki /cancel yozing")
+        return AI_GOAL_AMOUNT
+    if hasattr(context, 'user_data') and context.user_data is not None:
+        context.user_data['goal_amount'] = amount
+    await update.message.reply_text("Maqsad uchun oxirgi muddatni kiriting (masalan: 2024-12-31):")
+    return AI_GOAL_DEADLINE
+
+async def ai_goal_deadline(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return ConversationHandler.END
+    text = update.message.text.strip()
+    if hasattr(context, 'user_data') and context.user_data is not None:
+        context.user_data['goal_deadline'] = text
+    # Save to DB
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+    goal_name = None
+    goal_amount = None
+    goal_deadline = None
+    if hasattr(context, 'user_data') and context.user_data is not None:
+        goal_name = context.user_data.get('goal_name', None)
+        goal_amount = context.user_data.get('goal_amount', None)
+        goal_deadline = context.user_data.get('goal_deadline', None)
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("INSERT INTO goals (user_id, goal_name, target_amount, deadline) VALUES (?, ?, ?, ?)",
+              (user_id, goal_name, goal_amount, goal_deadline))
+    conn.commit()
+    conn.close()
+    reply_markup = ReplyKeyboardMarkup(MAIN_MENU_KEYBOARD, resize_keyboard=True)
+    await update.message.reply_text("Maqsad saqlandi! Progress monitoring uchun 'Ha' deb yozing yoki bekor qilish uchun 'Yo'q'.", reply_markup=reply_markup)
+    return AI_GOAL_MONITOR
+
+async def ai_goal_monitor(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return ConversationHandler.END
+    text = update.message.text.strip().lower()
+    if text in ["yo'q", "yoq", "bekor", "/cancel", "cancel", "❌ bekor qilish", "🏠 bosh menyu"]:
+        await update.message.reply_text("❌ Amal bekor qilindi.", reply_markup=UNIVERSAL_MENU)
+        return ConversationHandler.END
+    if text in ["ha", "yes", "ok", "tasdiqla"]:
+        user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT goal_name, target_amount, deadline FROM goals WHERE user_id = ? ORDER BY created_at DESC LIMIT 1", (user_id,))
+        goal_row = c.fetchone()
+        c.execute("SELECT type, amount, category, note, date FROM transactions WHERE user_id = ? ORDER BY date DESC LIMIT 50", (user_id,))
+        transactions = c.fetchall()
+        conn.close()
+        if not goal_row:
+            await update.message.reply_text("Maqsad topilmadi.", reply_markup=UNIVERSAL_MENU)
+            return ConversationHandler.END
+        goal_data = {'goal_name': goal_row[0], 'target_amount': goal_row[1], 'deadline': goal_row[2]}
+        transactions_list = [
+            {'type': t[0], 'amount': t[1], 'category': t[2], 'note': t[3], 'date': t[4]} for t in transactions
+        ]
+        ai_text = ai_service.monitor_goal_progress(goal_data, transactions_list)
+        ai_text = ai_text.replace('**', '') if ai_text else ai_text
+        await update.message.reply_text(f"🎯 <b>Maqsad monitoringi:</b>\n\n{ai_text}", reply_markup=UNIVERSAL_MENU, parse_mode=ParseMode.HTML)
+        return ConversationHandler.END
+    else:
+        await update.message.reply_text("Iltimos, 'Ha' yoki 'Yo'q' deb javob bering.", reply_markup=ReplyKeyboardMarkup([["Ha"], ["Yo'q"]], resize_keyboard=True, one_time_keyboard=True))
+        return AI_GOAL_MONITOR
+
+ai_goal_conv_handler = ConversationHandler(
+    entry_points=[CommandHandler("ai_maqsad", ai_goal_start)],
+    states={
+        AI_GOAL_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, ai_goal_name)],
+        AI_GOAL_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, ai_goal_amount)],
+        AI_GOAL_DEADLINE: [MessageHandler(filters.TEXT & ~filters.COMMAND, ai_goal_deadline)],
+        AI_GOAL_MONITOR: [MessageHandler(filters.TEXT & ~filters.COMMAND, ai_goal_monitor)],
+    },
+    fallbacks=[CommandHandler("cancel", cancel)],
+)
+
 # ==== MAIN ====
 def main():
     if not BOT_TOKEN:
@@ -1089,6 +1387,10 @@ def main():
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(MessageHandler(filters.Regex("^/reply_"), admin_reply))
+    app.add_handler(CommandHandler("stat", show_stats))
+    app.add_handler(push_conv_handler)
+    app.add_handler(ai_budget_conv_handler)
+    app.add_handler(ai_goal_conv_handler)
 
     logger.info("FinBot AI ishga tushmoqda...")
     app.run_polling()
