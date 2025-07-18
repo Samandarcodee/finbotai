@@ -1426,10 +1426,14 @@ async def onboarding_currency(update: Update, context: ContextTypes.DEFAULT_TYPE
     text = update.message.text
     user_id = getattr(update.message.from_user, 'id', None)
     currency = get_currency_code(text)
-    # Save to DB
+    # Save currency to DB, but preserve other columns (like onboarding_done)
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("INSERT OR REPLACE INTO user_settings (user_id, currency) VALUES (?, ?)", (user_id, currency))
+    c.execute("""
+        INSERT INTO user_settings (user_id, currency)
+        VALUES (?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET currency = excluded.currency
+    """, (user_id, currency))
     conn.commit()
     conn.close()
     await update.message.reply_text(
@@ -1457,15 +1461,18 @@ async def onboarding_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ONBOARDING_GOAL
 
 async def onboarding_goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global MESSAGES
     if not update.message or not update.message.text or not hasattr(update.message, 'from_user') or update.message.from_user is None:
         return ConversationHandler.END
     text = update.message.text.strip()
     user_id = getattr(update.message.from_user, 'id', None)
     if user_id is None:
         return ConversationHandler.END
-    user_data = context.user_data if hasattr(context, 'user_data') and context.user_data is not None else {}
+    user_data = getattr(context, 'user_data', {})
+    if not isinstance(user_data, dict):
+        user_data = {}
     income = user_data.get('onboarding_income', 0)
-    # Save goal to DB (goals table)
+    # Save goal to DB (goals table) and mark onboarding as done
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("INSERT INTO goals (user_id, goal_name, target_amount, deadline) VALUES (?, ?, ?, ?)",
@@ -1473,7 +1480,12 @@ async def onboarding_goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     c.execute("UPDATE user_settings SET onboarding_done = 1 WHERE user_id = ?", (user_id,))
     conn.commit()
     conn.close()
-    await update.message.reply_text(MESSAGES["uz"]["onboarding_done"], reply_markup=ReplyKeyboardRemove())
+    onboarding_done_msg = None
+    try:
+        onboarding_done_msg = MESSAGES["uz"]["onboarding_done"]
+    except Exception:
+        onboarding_done_msg = "🎯 Onboarding yakunlandi! Endi asosiy menyudan foydalanishingiz mumkin."
+    await update.message.reply_text(onboarding_done_msg, reply_markup=ReplyKeyboardRemove())
     return await show_main_menu(update)
 
 # ONBOARDING CONV HANDLER
