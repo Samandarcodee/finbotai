@@ -194,10 +194,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Check if user is new (onboarding needed)
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT 1 FROM user_settings WHERE user_id = ?", (user_id,))
-    settings_exists = c.fetchone()
+    c.execute("SELECT onboarding_done FROM user_settings WHERE user_id = ?", (user_id,))
+    row = c.fetchone()
     conn.close()
-    if not settings_exists:
+    if row is None or not isinstance(row, (list, tuple)) or not row[0]:
         # Onboarding: hissiyotli welcome va 3 bosqich
         welcome_text = (
             f"👋 Assalomu alaykum, {user_name}!\n\n"
@@ -211,19 +211,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ], resize_keyboard=True, one_time_keyboard=True)
         await update.message.reply_text(welcome_text, reply_markup=currency_kb)
         return ONBOARDING_CURRENCY
-    # Agar onboardingdan o'tgan bo'lsa, oddiy menyu
-    welcome_text = (
-        f"👋 Salom, {user_name}!\n\n"
-        "Men FinBot AI — sizning aqlli moliyaviy yordamchingizman!\n\n"
-        "Quyidagi amallardan birini tanlang:"
-    )
-    inline_kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("Balansni ko'rish 📊", callback_data="show_balance")],
-        [InlineKeyboardButton("Tahlil qilish 📈", callback_data="show_analysis")],
-        [InlineKeyboardButton("AI maslahat olish 🤖", callback_data="show_ai_advice")]
-    ])
-    await update.message.reply_text(welcome_text, reply_markup=inline_kb)
-    return ConversationHandler.END
+    # Agar onboardingdan o'tgan bo'lsa, asosiy menyu (faqat InlineKeyboard)
+    return await show_main_menu(update)
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
@@ -1476,9 +1465,9 @@ async def onboarding_goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     c = conn.cursor()
     c.execute("INSERT INTO goals (user_id, goal_name, target_amount, deadline) VALUES (?, ?, ?, ?)",
               (user_id, text, income, None))
+    c.execute("UPDATE user_settings SET onboarding_done = 1 WHERE user_id = ?", (user_id,))
     conn.commit()
     conn.close()
-    set_onboarded(user_id)
     await update.message.reply_text(MESSAGES["uz"]["onboarding_done"], reply_markup=ReplyKeyboardRemove())
     return await show_main_menu(update)
 
