@@ -115,15 +115,20 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS user_settings (
                     user_id INTEGER PRIMARY KEY,
                     language TEXT DEFAULT 'uz',
-                    currency TEXT DEFAULT "so'm"
+                    currency TEXT DEFAULT "so'm",
+                    onboarding_done INTEGER DEFAULT 0
                 )''')
+    # Add onboarding_done column if missing (for existing DB)
+    try:
+        c.execute("ALTER TABLE user_settings ADD COLUMN onboarding_done INTEGER DEFAULT 0")
+    except Exception:
+        pass
     c.execute('''CREATE TABLE IF NOT EXISTS budgets (
                     user_id INTEGER,
                     category TEXT,
                     amount INTEGER,
                     month TEXT
                 )''')
-    # New: goals table
     c.execute('''CREATE TABLE IF NOT EXISTS goals (
                     user_id INTEGER,
                     goal_name TEXT,
