@@ -357,7 +357,7 @@ async def admin_panel(update, context):
         ops_today = c.fetchone()[0] or 0
         
         # Get most active user
-    c.execute("""
+        c.execute("""
         SELECT u.first_name, u.username, COUNT(t.user_id) as cnt
             FROM users u JOIN transactions t ON u.user_id = t.user_id
             WHERE date(t.date) = ?
@@ -365,13 +365,13 @@ async def admin_panel(update, context):
         ORDER BY cnt DESC
         LIMIT 1
         """, (today,))
-    row = c.fetchone()
-    if row:
+        row = c.fetchone()
+        if row:
             most_active = f"{row[0] or ''} (@{row[1] or ''}) - {row[2]} ta"
-    else:
-        most_active = "Yo'q"
+        else:
+            most_active = "Yo'q"
         
-    conn.close()
+        conn.close()
         
         # Get server logs
         log_tail = ""
@@ -391,7 +391,7 @@ async def admin_panel(update, context):
         )
         await update.message.reply_text(text, parse_mode="HTML")
         
-            except Exception as e:
+    except Exception as e:
         logger.exception(f"Admin panel error: {e}")
         await update.message.reply_text("❌ Admin panelda xatolik.")
 
