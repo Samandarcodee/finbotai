@@ -123,6 +123,24 @@ def validate_amount(amount_str):
     except ValueError:
         return None, "Noto'g'ri format! Faqat raqam kiriting."
 
+def get_category_keyboard(is_income=True):
+    if is_income:
+        categories = [
+            ["💵 Maosh", "🎁 Sovg'a"],
+            ["💸 Bonus", "💳 Boshqa kirim"],
+            ["🔙 Orqaga", "❌ Bekor qilish", "🏠 Bosh menyu"]
+        ]
+    else:
+        categories = [
+            ["🍔 Oziq-ovqat", "🚗 Transport"],
+            ["💊 Sog'liq", "📚 Ta'lim"],
+            ["🎮 O'yin-kulgi", "👕 Kiyim"],
+            ["🏠 Uy", "📱 Aloqa"],
+            ["💳 Boshqa chiqim", "🔙 Orqaga"],
+            ["❌ Bekor qilish", "🏠 Bosh menyu"]
+        ]
+    return ReplyKeyboardMarkup(categories, resize_keyboard=True, one_time_keyboard=True)
+
 # ==== COMMANDS ====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
@@ -231,33 +249,15 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     if text == "\U0001F4B0 Kirim qo'shish":
-        categories_keyboard = [
-            ["\U0001F354 Oziq-ovqat", "\U0001F697 Transport"],
-            ["\U0001F48A Sog'liq", "\U0001F4DA Ta'lim"],
-            ["\U0001F3AE O'yin-kulgi", "\U0001F455 Kiyim"],
-            ["\U0001F3E0 Uy", "\U0001F4F1 Aloqa"],
-            ["\U0001F4B3 Boshqa", "\U0001F519 Orqaga"],
-            ["❌ Bekor qilish", "🏠 Bosh menyu"]
-        ]
-        category_markup = ReplyKeyboardMarkup(categories_keyboard, resize_keyboard=True, one_time_keyboard=True)
         await update.message.reply_text(
             "💰 Kirim uchun kategoriya tanlang:",
-            reply_markup=category_markup
+            reply_markup=get_category_keyboard(is_income=True)
         )
         return 4
     elif text == "\U0001F4B8 Chiqim qo'shish":
-        categories_keyboard = [
-            ["\U0001F354 Oziq-ovqat", "\U0001F697 Transport"],
-            ["\U0001F48A Sog'liq", "\U0001F4DA Ta'lim"],
-            ["\U0001F3AE O'yin-kulgi", "\U0001F455 Kiyim"],
-            ["\U0001F3E0 Uy", "\U0001F4F1 Aloqa"],
-            ["\U0001F4B3 Boshqa", "\U0001F519 Orqaga"],
-            ["❌ Bekor qilish", "🏠 Bosh menyu"]
-        ]
-        category_markup = ReplyKeyboardMarkup(categories_keyboard, resize_keyboard=True, one_time_keyboard=True)
         await update.message.reply_text(
             "💸 Chiqim uchun kategoriya tanlang:",
-            reply_markup=category_markup
+            reply_markup=get_category_keyboard(is_income=False)
         )
         return 3
     elif text == "\U0001F4CA Balans":
@@ -495,18 +495,13 @@ async def income_category_selected(update: Update, context: ContextTypes.DEFAULT
         return await cancel(update, context)
     
     income_category_map = {
-        "\U0001F354 Oziq-ovqat": "Oziq-ovqat",
-        "\U0001F697 Transport": "Transport", 
-        "\U0001F48A Sog'liq": "Sog'liq",
-        "\U0001F4DA Ta'lim": "Ta'lim",
-        "\U0001F3AE O'yin-kulgi": "O'yin-kulgi",
-        "\U0001F455 Kiyim": "Kiyim",
-        "\U0001F3E0 Uy": "Uy",
-        "\U0001F4F1 Aloqa": "Aloqa",
-        "\U0001F4B3 Boshqa": "Boshqa"
+        "💵 Maosh": "Maosh",
+        "🎁 Sovg'a": "Sovg'a",
+        "💸 Bonus": "Bonus",
+        "💳 Boshqa kirim": "Boshqa kirim"
     }
     
-    selected_category = income_category_map[text] if text in income_category_map else "Boshqa kirim"
+    selected_category = income_category_map.get(text, "Boshqa kirim")
     if hasattr(context, 'user_data') and context.user_data is not None:
         context.user_data['selected_income_category'] = selected_category
     
@@ -529,18 +524,18 @@ async def expense_category_selected(update: Update, context: ContextTypes.DEFAUL
         return await cancel(update, context)
     
     expense_category_map = {
-        "\U0001F354 Oziq-ovqat": "Oziq-ovqat",
-        "\U0001F697 Transport": "Transport", 
-        "\U0001F48A Sog'liq": "Sog'liq",
-        "\U0001F4DA Ta'lim": "Ta'lim",
-        "\U0001F3AE O'yin-kulgi": "O'yin-kulgi",
-        "\U0001F455 Kiyim": "Kiyim",
-        "\U0001F3E0 Uy": "Uy",
-        "\U0001F4F1 Aloqa": "Aloqa",
-        "\U0001F4B3 Boshqa": "Boshqa"
+        "🍔 Oziq-ovqat": "Oziq-ovqat",
+        "🚗 Transport": "Transport",
+        "💊 Sog'liq": "Sog'liq",
+        "📚 Ta'lim": "Ta'lim",
+        "🎮 O'yin-kulgi": "O'yin-kulgi",
+        "👕 Kiyim": "Kiyim",
+        "🏠 Uy": "Uy",
+        "📱 Aloqa": "Aloqa",
+        "💳 Boshqa chiqim": "Boshqa chiqim"
     }
     
-    selected_category = expense_category_map[text] if text in expense_category_map else "Boshqa"
+    selected_category = expense_category_map.get(text, "Boshqa chiqim")
     if hasattr(context, 'user_data') and context.user_data is not None:
         context.user_data['selected_expense_category'] = selected_category
     
