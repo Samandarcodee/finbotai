@@ -75,7 +75,7 @@ async def show_ai_menu(update, context):
         
         # Create AI menu keyboard
         keyboard = [
-            ["🤖 AI Moliyaviy Maslahat", "📊 AI Xarajatlar Tahlili"],
+            ["💡 AI Moliyaviy Maslahat", "📊 AI Xarajatlar Tahlili"],
             ["💰 AI Byudjet Tavsiyasi", "🏆 AI Maqsad Monitoring"],
             ["💡 AI Tejash Maslahatlari", "📈 AI Investitsiya Maslahati"],
             ["🏠 Bosh menyu"]
@@ -226,7 +226,6 @@ async def show_ai_analysis(update, context):
         if update.message:
             await update.message.reply_text(
                 analysis_text,
-                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
                 parse_mode="HTML"
             )
         
@@ -416,7 +415,6 @@ async def show_budget_advice(update, context):
         if update.message:
             await update.message.reply_text(
                 advice_text,
-                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
                 parse_mode="HTML"
             )
         
@@ -476,7 +474,6 @@ async def show_savings_tips(update, context):
         if update.message:
             await update.message.reply_text(
                 tips_text,
-                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
                 parse_mode="HTML"
             )
         
