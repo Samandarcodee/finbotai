@@ -9,7 +9,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 from telegram.constants import ParseMode
 from datetime import datetime
 from db import get_db_connection, get_user_settings, validate_amount, DB_PATH
-from main import format_amount
+from utils import format_amount
 from loguru import logger
 
 # State constants

@@ -167,9 +167,11 @@ async def onboarding_currency(update: Update, context: ContextTypes.DEFAULT_TYPE
         context.user_data['currency'] = currency
         
         logger.info(f"Sending optional income step message to user {user_id}")
-        from main import get_message
-        income_text = get_message("income_input", user_id)
-        skip_option = get_message("skip_option", user_id)
+        from utils import get_user_language
+        from main import MESSAGES
+        language = get_user_language(user_id)
+        income_text = MESSAGES.get(language, MESSAGES["uz"]).get("income_input", "3️⃣ Oylik taxminiy daromadingizni kiriting yoki o'tkazib yuboring:")
+        skip_option = MESSAGES.get(language, MESSAGES["uz"]).get("skip_option", "⏭ O'tkazib yuborish")
         await update.message.reply_text(
             income_text,
             reply_markup=ReplyKeyboardMarkup([
@@ -196,11 +198,13 @@ async def onboarding_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     
     # Check if user wants to skip
-    from main import get_message
-    skip_option = get_message("skip_option", user_id)
+    from utils import get_user_language
+    from main import MESSAGES
+    language = get_user_language(user_id)
+    skip_option = MESSAGES.get(language, MESSAGES["uz"]).get("skip_option", "⏭ O'tkazib yuborish")
     
     if text == skip_option:
-        goal_text = get_message("goal_input", user_id)
+        goal_text = MESSAGES.get(language, MESSAGES["uz"]).get("goal_input", "4️⃣ Maqsad qo'yish yoki o'tkazib yuboring:")
         await update.message.reply_text(
             goal_text,
             reply_markup=ReplyKeyboardMarkup([
@@ -215,7 +219,7 @@ async def onboarding_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if income <= 0:
             raise ValueError
     except ValueError:
-        error_text = get_message("error_format", user_id)
+        error_text = MESSAGES.get(language, MESSAGES["uz"]).get("error_format", "❌ Noto'g'ri format! Masalan: 3 000 000 yoki 5000000.")
         await update.message.reply_text(
             error_text,
             reply_markup=ReplyKeyboardMarkup([
@@ -247,8 +251,10 @@ async def onboarding_goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     
     # Check if user wants to skip
-    from main import get_message
-    skip_option = get_message("skip_option", user_id)
+    from utils import get_user_language
+    from main import MESSAGES
+    language = get_user_language(user_id)
+    skip_option = MESSAGES.get(language, MESSAGES["uz"]).get("skip_option", "⏭ O'tkazib yuborish")
     
     if text == skip_option:
         # Mark onboarding as done without goal
@@ -259,12 +265,12 @@ async def onboarding_goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
             conn.commit()
             conn.close()
             
-            completion_text = get_message("completion_minimal", user_id)
+            completion_text = MESSAGES.get(language, MESSAGES["uz"]).get("completion_minimal", "🎉 Onboarding yakunlandi!")
             await update.message.reply_text(completion_text, reply_markup=ReplyKeyboardRemove())
             return await show_main_menu(update)
         except sqlite3.Error as e:
             logger.exception(f"Database error in onboarding_goal: {e}")
-            await update.message.reply_text(get_message("error_general", user_id))
+            await update.message.reply_text(MESSAGES.get(language, MESSAGES["uz"]).get("error_general", "❌ Xatolik yuz berdi. Qaytadan urinib ko'ring."))
             return ConversationHandler.END
     
     # Process goal input
@@ -316,6 +322,11 @@ async def onboarding_goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def show_main_menu(update):
     """Show main menu with reply keyboard"""
     from main import MAIN_MODULES_KEYBOARD
+    from utils import get_user_language
+    
+    user_id = getattr(update.message.from_user, 'id', None)
+    language = get_user_language(user_id) if user_id else "uz"
+    keyboard = MAIN_MODULES_KEYBOARD.get(language, MAIN_MODULES_KEYBOARD["uz"])
     
     welcome_text = (
         "🎉 Tabriklaymiz! Onboarding yakunlandi!\n\n"
@@ -328,7 +339,7 @@ async def show_main_menu(update):
     
     await update.message.reply_text(
         welcome_text, 
-        reply_markup=ReplyKeyboardMarkup(MAIN_MODULES_KEYBOARD, resize_keyboard=True),
+        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
         parse_mode="HTML"
     )
     return ConversationHandler.END
