@@ -11,7 +11,7 @@ from loguru import logger
 from telegram.constants import ParseMode
 import json
 from datetime import datetime
-from utils import get_navigation_keyboard
+from utils import get_navigation_keyboard, build_reply_keyboard
 
 # Import start function from start handler
 from handlers.start import start
@@ -112,11 +112,11 @@ async def show_settings(update: Update, user_id: int):
             ["🔔 Bildirishnomalar", "📊 Avtomatik hisobotlar"],
             ["📤 Ma'lumotlarni eksport qilish", "💾 Zaxira nusxasi"],
             ["🗑️ Ma'lumotlarni o'chirish"]
-        ] + get_navigation_keyboard()
+        ]
         if update.message:
             await update.message.reply_text(
                 text, 
-                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+                reply_markup=build_reply_keyboard(keyboard, resize=True),
                 parse_mode=ParseMode.HTML
             )
             return 5  # Return the main settings menu state
@@ -145,18 +145,18 @@ async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Handle settings options
     if text == "💰 Valyutani o'zgartirish":
-        reply_markup = ReplyKeyboardMarkup([
+        reply_markup = build_reply_keyboard([
             ["🇺🇿 So'm", "💵 Dollar", "💶 Euro"],
             ["🇷🇺 Rubl", "🇰🇿 Tenge", "🇰🇬 Som"],
             ["🇹🇷 Lira", "🇨🇳 Yuan", "🇯🇵 Yen"]
-        ] + get_navigation_keyboard(), resize_keyboard=True, one_time_keyboard=True)
+        ], resize=True, one_time=True)
         await update.message.reply_text("Valyutani tanlang:", reply_markup=reply_markup)
         return SETTINGS_CURRENCY
         
     elif text == "🌐 Tilni o'zgartirish":
-        reply_markup = ReplyKeyboardMarkup([
+        reply_markup = build_reply_keyboard([
             ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"]
-        ] + get_navigation_keyboard(), resize_keyboard=True, one_time_keyboard=True)
+        ], resize=True, one_time=True)
         await update.message.reply_text("Tilni tanlang:", reply_markup=reply_markup)
         return SETTINGS_LANGUAGE
         
@@ -180,10 +180,10 @@ async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ <b>Eslatma:</b> Bu amal barcha ma'lumotlaringizni o'chiradi va qayta tiklanmaydi.\n\n"
             "Haqiqatan ham ma'lumotlaringizni o'chirmoqchimisiz?",
-            reply_markup=ReplyKeyboardMarkup([
+            reply_markup=build_reply_keyboard([
                 ["✅ Ha, o'chir"],
                 ["❌ Yo'q, bekor qil"]
-            ] + get_navigation_keyboard(), resize_keyboard=True, one_time_keyboard=True),
+            ], resize=True, one_time=True),
             parse_mode="HTML"
         )
         return SETTINGS_DELETE

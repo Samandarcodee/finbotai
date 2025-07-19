@@ -7,7 +7,7 @@ import asyncio
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
 from db import get_db_connection, get_user_settings, DB_PATH
-from utils import format_amount
+from utils import format_amount, get_navigation_keyboard, build_reply_keyboard
 from ai_service import ai_service
 from loguru import logger
 import sqlite3
@@ -71,15 +71,14 @@ async def show_ai_menu(update: Update, user_id: int):
         
         # Create AI menu keyboard
         keyboard = [
-            ["🧠 AI Moliyaviy Maslahat", "📊 AI Xarajatlar Tahlili"],
-            ["💰 AI Byudjet Tavsiyasi", "🎯 AI Maqsad Monitoring"],
+            ["🤖 AI Moliyaviy Maslahat", "📊 AI Xarajatlar Tahlili"],
+            ["💰 AI Byudjet Tavsiyasi", "🏆 AI Maqsad Monitoring"],
             ["💡 AI Tejash Maslahatlari", "📈 AI Investitsiya Maslahati"]
-        ] + get_navigation_keyboard()
-        
+        ]
         if update.message:
             await update.message.reply_text(
                 ai_menu_text,
-                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+                reply_markup=build_reply_keyboard(keyboard, resize=True),
                 parse_mode="HTML"
             )
         return 100  # AI menu state

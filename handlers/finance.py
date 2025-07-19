@@ -9,7 +9,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 from telegram.constants import ParseMode
 from datetime import datetime
 from db import get_db_connection, get_user_settings, validate_amount, DB_PATH
-from utils import format_amount, get_navigation_keyboard
+from utils import format_amount, get_navigation_keyboard, build_reply_keyboard
 from loguru import logger
 
 # State constants
@@ -23,7 +23,7 @@ def get_category_keyboard(is_income=True):
             ["💵 Maosh", "🏦 Kredit/qarz"],
             ["🎁 Sovg'a/yordam", "💸 Qo'shimcha daromad"],
             ["💳 Boshqa daromad"]
-        ] + get_navigation_keyboard()
+        ]
     else:
         categories = [
             ["🍔 Oziq-ovqat", "🚗 Transport"],
@@ -31,8 +31,8 @@ def get_category_keyboard(is_income=True):
             ["🎮 O'yin-kulgi", "👕 Kiyim"],
             ["🏠 Uy", "📱 Aloqa"],
             ["💳 Boshqa chiqim"]
-        ] + get_navigation_keyboard()
-    return ReplyKeyboardMarkup(categories, resize_keyboard=True, one_time_keyboard=True)
+        ]
+    return build_reply_keyboard(categories, resize=True, one_time=True)
 
 async def show_balance(update: Update, user_id: int):
     """Show user balance with improved formatting and navigation"""
@@ -89,13 +89,12 @@ async def show_balance(update: Update, user_id: int):
         keyboard = [
             ["📈 Tahlil", "📊 Kategoriyalar"],
             ["💰 Kirim/Chiqim"]
-        ] + get_navigation_keyboard()
-        
+        ]
         if update.message:
             await update.message.reply_text(
                 balance_text, 
                 parse_mode=ParseMode.HTML,
-                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+                reply_markup=build_reply_keyboard(keyboard, resize=True)
             )
     except sqlite3.Error as e:
         logger.exception(f"Balance error: {e}")
@@ -156,13 +155,13 @@ async def show_analysis(update: Update, user_id: int):
         if not transactions:
             keyboard = [
                 ["💰 Kirim qo'shish", "💸 Chiqim qo'shish"]
-            ] + get_navigation_keyboard()
+            ]
             if update.message:
                 await update.message.reply_text(
                     "📈 <b>TAHLIL</b>\n\n"
                     "Hali tranzaksiyalar yo'q. Avval kirim yoki chiqim qo'shing!",
                     parse_mode=ParseMode.HTML,
-                    reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+                    reply_markup=build_reply_keyboard(keyboard, resize=True)
                 )
             return
         
@@ -190,13 +189,12 @@ async def show_analysis(update: Update, user_id: int):
         keyboard = [
             ["📊 Balans", "📊 Kategoriyalar"],
             ["💰 Kirim/Chiqim"]
-        ] + get_navigation_keyboard()
-        
+        ]
         if update.message:
             await update.message.reply_text(
                 analysis_text,
                 parse_mode=ParseMode.HTML,
-                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+                reply_markup=build_reply_keyboard(keyboard, resize=True)
             )
         
     except sqlite3.Error as e:

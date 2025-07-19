@@ -10,7 +10,7 @@ from telegram.constants import ParseMode
 from datetime import datetime, timedelta
 from db import init_db, get_db_connection, get_user_settings, get_currency_code, set_onboarded, is_onboarded, DB_PATH
 from loguru import logger
-from utils import get_navigation_keyboard
+from utils import get_navigation_keyboard, build_reply_keyboard
 
 ONBOARDING_LANGUAGE, ONBOARDING_CURRENCY, ONBOARDING_INCOME, ONBOARDING_GOAL = 300, 301, 302, 303
 
@@ -39,9 +39,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Onboarding: til tanlash bilan boshlanadi
             from constants import get_message
             welcome_text = get_message("welcome", user_id, name=user_name)
-            language_kb = ReplyKeyboardMarkup([
+            language_kb = build_reply_keyboard([
                 ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"]
-            ], resize_keyboard=True, one_time_keyboard=True)
+            ], resize=True, one_time=True)
             await update.message.reply_text(welcome_text, reply_markup=language_kb, parse_mode="HTML")
             return ONBOARDING_LANGUAGE
         # Agar onboardingdan o'tgan bo'lsa, asosiy menyu
@@ -108,11 +108,11 @@ async def onboarding_language(update: Update, context: ContextTypes.DEFAULT_TYPE
         currency_text = get_message("currency_select", user_id)
         await update.message.reply_text(
             currency_text,
-            reply_markup=ReplyKeyboardMarkup([
+            reply_markup=build_reply_keyboard([
                 ["🇺🇿 So'm", "💵 Dollar", "💶 Euro"],
                 ["🇷🇺 Rubl", "🇰🇿 Tenge", "🇰🇬 Som"],
                 ["🇹🇷 Lira", "🇨🇳 Yuan", "🇯🇵 Yen"]
-            ], resize_keyboard=True, one_time_keyboard=True)
+            ], resize=True, one_time=True)
         )
         logger.info(f"Returning ONBOARDING_CURRENCY state: {ONBOARDING_CURRENCY}")
         return ONBOARDING_CURRENCY
@@ -171,9 +171,9 @@ async def onboarding_currency(update: Update, context: ContextTypes.DEFAULT_TYPE
         skip_option = MESSAGES.get(language, MESSAGES["uz"]).get("skip_option", "⏭ O'tkazib yuborish")
         await update.message.reply_text(
             income_text,
-            reply_markup=ReplyKeyboardMarkup([
+            reply_markup=build_reply_keyboard([
                 [skip_option]
-            ], resize_keyboard=True, one_time_keyboard=True)
+            ], resize=True, one_time=True)
         )
         logger.info(f"Returning ONBOARDING_INCOME state: {ONBOARDING_INCOME}")
         return ONBOARDING_INCOME

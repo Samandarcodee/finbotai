@@ -8,7 +8,7 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
 from telegram.constants import ParseMode
 from db import get_db_connection, get_user_settings, DB_PATH
-from utils import format_amount, validate_amount, get_navigation_keyboard
+from utils import format_amount, validate_amount, get_navigation_keyboard, build_reply_keyboard
 from ai_service import ai_service
 from datetime import datetime
 from loguru import logger
@@ -40,12 +40,11 @@ async def ai_goal_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             ["📝 Maqsad nomini kiriting"],
             ["💡 Maqsad tavsiyalari"]
-        ] + get_navigation_keyboard()
-        
+        ]
         await update.message.reply_text(
-            "🎯 <b>Maqsad qo'yish</b>\n\n"
+            "🏆 <b>Maqsad qo'yish</b>\n\n"
             "Maqsad nomini kiriting (masalan: iPhone 15 Pro, O'qish, Safar):",
-            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+            reply_markup=build_reply_keyboard(keyboard, resize=True),
             parse_mode="HTML"
         )
         return 1  # Goal name state
@@ -77,12 +76,11 @@ async def ai_goal_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         ["💰 Miqdorni kiriting"],
         ["💡 Miqdor tavsiyalari"]
-    ] + get_navigation_keyboard()
-    
+    ]
     await update.message.reply_text(
         f"✅ Maqsad nomi: <b>{text}</b>\n\n"
         "Endi maqsad miqdorini kiriting (masalan: 5 000 000):",
-        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+        reply_markup=build_reply_keyboard(keyboard, resize=True),
         parse_mode="HTML"
     )
     return 2  # Goal amount state
@@ -111,11 +109,10 @@ async def ai_goal_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             ["💰 Miqdorni qayta kiriting"],
             ["💡 Miqdor tavsiyalari"]
-        ] + get_navigation_keyboard()
-        
+        ]
         await update.message.reply_text(
             f"❌ {error}\n\nQaytadan kiriting:",
-            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+            reply_markup=build_reply_keyboard(keyboard, resize=True)
         )
         return 2  # Stay in amount state
     
@@ -125,12 +122,11 @@ async def ai_goal_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         ["📅 Muddatni kiriting"],
         ["💡 Muddat tavsiyalari"]
-    ] + get_navigation_keyboard()
-    
+    ]
     await update.message.reply_text(
         f"✅ Maqsad miqdori: <b>{format_amount(amount, user_id)}</b>\n\n"
         "Endi maqsad muddatini kiriting (masalan: 2024-12-31):",
-        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+        reply_markup=build_reply_keyboard(keyboard, resize=True),
         parse_mode="HTML"
     )
     return 3  # Goal deadline state
@@ -160,22 +156,20 @@ async def ai_goal_deadline(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard = [
                 ["📅 Muddatni qayta kiriting"],
                 ["💡 Muddat tavsiyalari"]
-            ] + get_navigation_keyboard()
-            
+            ]
             await update.message.reply_text(
                 "❌ Muddat o'tgan bo'lishi mumkin emas!\n\nQaytadan kiriting:",
-                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+                reply_markup=build_reply_keyboard(keyboard, resize=True)
             )
             return 3  # Stay in deadline state
     except ValueError:
         keyboard = [
             ["📅 Muddatni qayta kiriting"],
             ["💡 Muddat tavsiyalari"]
-        ] + get_navigation_keyboard()
-        
+        ]
         await update.message.reply_text(
             "❌ Noto'g'ri format! YYYY-MM-DD formatida kiriting.\n\nQaytadan kiriting:",
-            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+            reply_markup=build_reply_keyboard(keyboard, resize=True)
         )
         return 3  # Stay in deadline state
     
@@ -189,15 +183,14 @@ async def ai_goal_deadline(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         ["✅ Maqsadni saqlash"],
         ["❌ Bekor qilish"]
-    ] + get_navigation_keyboard()
-    
+    ]
     await update.message.reply_text(
-        f"🎯 <b>Maqsad ma'lumotlari:</b>\n\n"
+        f"🏆 <b>Maqsad ma'lumotlari:</b>\n\n"
         f"📝 Nomi: <b>{goal_name}</b>\n"
         f"💰 Miqdori: <b>{format_amount(goal_amount, user_id)}</b>\n"
         f"📅 Muddati: <b>{text}</b>\n\n"
         "Maqsadni saqlashni xohlaysizmi?",
-        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+        reply_markup=build_reply_keyboard(keyboard, resize=True),
         parse_mode="HTML"
     )
     return 4  # Goal confirmation state

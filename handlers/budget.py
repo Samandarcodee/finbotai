@@ -8,7 +8,7 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
 from telegram.constants import ParseMode
 from db import get_db_connection, get_user_settings, DB_PATH
-from utils import format_amount, get_navigation_keyboard
+from utils import format_amount, get_navigation_keyboard, build_reply_keyboard, validate_amount
 from ai_service import ai_service
 from datetime import datetime
 from loguru import logger
@@ -22,9 +22,9 @@ async def ai_budget_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     
     text = update.message.text
-    user_id = getattr(update.message.from_user, 'id', None)
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     
-    if not user_id:
+    if user_id is None:
         return ConversationHandler.END
     
     # Universal navigation
@@ -40,12 +40,11 @@ async def ai_budget_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             ["📝 Oylik daromadni kiriting"],
             ["💡 Daromad tavsiyalari"]
-        ] + get_navigation_keyboard()
-        
+        ]
         await update.message.reply_text(
             "💰 <b>AI Byudjet yaratish</b>\n\n"
             "Oylik daromadingizni kiriting (masalan: 3 000 000):",
-            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+            reply_markup=build_reply_keyboard(keyboard, resize=True),
             parse_mode="HTML"
         )
         return 1  # Budget income state
@@ -59,9 +58,9 @@ async def ai_budget_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     
     text = update.message.text
-    user_id = getattr(update.message.from_user, 'id', None)
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     
-    if not user_id:
+    if user_id is None:
         return ConversationHandler.END
     
     # Universal navigation
@@ -77,11 +76,10 @@ async def ai_budget_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             ["💰 Daromadni qayta kiriting"],
             ["💡 Daromad tavsiyalari"]
-        ] + get_navigation_keyboard()
-        
+        ]
         await update.message.reply_text(
             f"❌ {error}\n\nQaytadan kiriting:",
-            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+            reply_markup=build_reply_keyboard(keyboard, resize=True)
         )
         return 1  # Stay in income state
     
@@ -94,14 +92,13 @@ async def ai_budget_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         ["✅ Byudjetni saqlash"],
         ["❌ Bekor qilish"]
-    ] + get_navigation_keyboard()
-    
+    ]
     await update.message.reply_text(
         f"💰 <b>AI Byudjet tavsiyalari</b>\n\n"
         f"📊 Oylik daromad: <b>{format_amount(amount, user_id)}</b>\n\n"
         f"{budget_recommendations}\n\n"
         "Byudjetni saqlashni xohlaysizmi?",
-        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+        reply_markup=build_reply_keyboard(keyboard, resize=True),
         parse_mode="HTML"
     )
     return 2  # Budget confirmation state
@@ -112,9 +109,9 @@ async def ai_budget_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     
     text = update.message.text
-    user_id = getattr(update.message.from_user, 'id', None)
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     
-    if not user_id:
+    if user_id is None:
         return ConversationHandler.END
     
     # Universal navigation
@@ -126,7 +123,9 @@ async def ai_budget_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Handle budget confirmation
     if text == "✅ Byudjetni saqlash":
-        budget_income = context.user_data.get('budget_income', 0)
+        budget_income = 0
+        if hasattr(context, 'user_data') and context.user_data and isinstance(context.user_data, dict):
+            budget_income = context.user_data.get('budget_income', 0)
         
         try:
             conn = sqlite3.connect(DB_PATH)
@@ -141,13 +140,12 @@ async def ai_budget_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard = [
                 ["📊 Byudjet holati"],
                 ["💰 AI Byudjet tavsiyasi"]
-            ] + get_navigation_keyboard()
-            
+            ]
             await update.message.reply_text(
                 f"✅ <b>Byudjet saqlandi!</b>\n\n"
                 f"💰 Oylik daromad: <b>{format_amount(budget_income, user_id)}</b>\n\n"
                 "Byudjetingizni kuzatib boring!",
-                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+                reply_markup=build_reply_keyboard(keyboard, resize=True),
                 parse_mode="HTML"
             )
             

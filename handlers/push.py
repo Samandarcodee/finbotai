@@ -8,7 +8,7 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
 from telegram.constants import ParseMode
 from db import get_all_user_ids, is_onboarded, get_user_settings, get_weekly_stats, DB_PATH
-from utils import format_amount, get_navigation_keyboard
+from utils import format_amount, get_navigation_keyboard, build_reply_keyboard
 from ai_service import ai_service
 import asyncio
 from loguru import logger
@@ -44,13 +44,13 @@ async def push_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "📢 Push xabar yuborish\n\n"
         "Xabar turini tanlang:",
-        reply_markup=ReplyKeyboardMarkup([
+        reply_markup=build_reply_keyboard([
             ["🌞 Kunlik eslatma"],
             ["📊 Haftalik hisobot"],
-            ["🎯 Oylik maqsad"],
+            ["🏆 Oylik maqsad"],
             ["🙏 Fikr so'rash"],
             ["❌ Bekor qilish"]
-        ], resize_keyboard=True, one_time_keyboard=True)
+        ], resize=True, one_time=True)
     )
     return PUSH_TOPIC
 
@@ -68,10 +68,10 @@ async def push_topic_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await update.message.reply_text(
         f"✅ Tanlangan: {text}\n\n"
         "Push xabarni yuborishni tasdiqlaysizmi?",
-        reply_markup=ReplyKeyboardMarkup([
+        reply_markup=build_reply_keyboard([
             ["✅ Ha, yubor"],
             ["❌ Yo'q, bekor qil"]
-        ], resize_keyboard=True, one_time_keyboard=True)
+        ], resize=True, one_time=True)
     )
     return PUSH_CONFIRM
 
@@ -95,7 +95,7 @@ async def push_confirm_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                 success_count, error_count = await send_daily_push_to_all(context)
             elif topic == "📊 Haftalik hisobot":
                 success_count, error_count = await send_weekly_push_to_all(context)
-            elif topic == "🎯 Oylik maqsad":
+            elif topic == "🏆 Oylik maqsad":
                 success_count, error_count = await send_monthly_goal_push_to_all(context)
             elif topic == "🙏 Fikr so'rash":
                 success_count, error_count = await send_monthly_feedback_push_to_all(context)

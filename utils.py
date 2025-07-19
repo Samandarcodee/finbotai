@@ -89,3 +89,13 @@ def get_navigation_keyboard(extra_buttons=None):
     if extra_buttons:
         return [extra_buttons] + [base]
     return [base] 
+
+def build_reply_keyboard(buttons, resize=True, one_time=False):
+    """Universal reply keyboard builder. Always adds navigation buttons at the bottom."""
+    from telegram import ReplyKeyboardMarkup
+    # Agar buttons list of lists bo'lsa, uni o'zgartirmaymiz
+    if buttons and isinstance(buttons[0], list):
+        keyboard = buttons + get_navigation_keyboard()
+    else:
+        keyboard = [buttons] + get_navigation_keyboard()
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=resize, one_time_keyboard=one_time) 
