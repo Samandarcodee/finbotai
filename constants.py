@@ -30,7 +30,17 @@ MESSAGES = {
         "error_general": "❌ Xatolik yuz berdi. Qaytadan urinib ko'ring.",
         "user_not_found": "❌ Foydalanuvchi ma'lumotlari topilmadi.",
         "ai_menu": "🤖 <b>AI VOSITALAR</b>\n\nQuyidagi AI funksiyalaridan birini tanlang:",
-        "settings_menu": "⚙️ <b>SOZLAMALAR</b>\n\nQuyidagi sozlamalardan birini tanlang:"
+        "settings_menu": "⚙️ <b>SOZLAMALAR</b>\n\nQuyidagi sozlamalardan birini tanlang:",
+        "data_exported": "📤 Ma'lumotlaringiz eksport qilindi.",
+        "error_export_data": "❌ Ma'lumotlarni eksport qilishda xatolik.",
+        "backup_created": "💾 Zaxira nusxasi yaratildi.",
+        "error_backup": "❌ Zaxira nusxasi yaratishda xatolik.",
+        "error_language_change": "❌ Tilni o'zgartirishda xatolik.",
+        "error_currency_change": "❌ Valyuta o'zgartirishda xatolik.",
+        "incorrect_currency_selection": "❌ Noto'g'ri valyuta tanlovi. Qaytadan tanlang.",
+        "data_deletion_cancelled": "❌ Ma'lumotlarni o'chirish bekor qilindi.",
+        "error_delete_data": "❌ Ma'lumotlarni o'chirishda xatolik.",
+        "incorrect_delete_selection": "❌ Noto'g'ri tanlov. Qaytadan tanlang."
     },
     "ru": {
         "main_menu": "🏠 Главное меню",
@@ -52,7 +62,17 @@ MESSAGES = {
         "error_general": "❌ Произошла ошибка. Попробуйте снова.",
         "user_not_found": "❌ Данные пользователя не найдены.",
         "ai_menu": "🤖 <b>AI ИНСТРУМЕНТЫ</b>\n\nВыберите одну из AI функций:",
-        "settings_menu": "⚙️ <b>НАСТРОЙКИ</b>\n\nВыберите одну из настроек:"
+        "settings_menu": "⚙️ <b>НАСТРОЙКИ</b>\n\nВыберите одну из настроек:",
+        "data_exported": "📤 Ваши данные экспортированы.",
+        "error_export_data": "❌ Ошибка при экспорте данных.",
+        "backup_created": "💾 Резервная копия создана.",
+        "error_backup": "❌ Ошибка при создании резервной копии.",
+        "error_language_change": "❌ Ошибка при смене языка.",
+        "error_currency_change": "❌ Ошибка при смене валюты.",
+        "incorrect_currency_selection": "❌ Неверный выбор валюты. Пожалуйста, выберите снова.",
+        "data_deletion_cancelled": "❌ Удаление данных отменено.",
+        "error_delete_data": "❌ Ошибка при удалении данных.",
+        "incorrect_delete_selection": "❌ Неверный выбор. Пожалуйста, выберите снова."
     },
     "en": {
         "main_menu": "🏠 Main Menu",
@@ -74,7 +94,17 @@ MESSAGES = {
         "error_general": "❌ An error occurred. Please try again.",
         "user_not_found": "❌ User data not found.",
         "ai_menu": "🤖 <b>AI TOOLS</b>\n\nSelect one of the AI functions:",
-        "settings_menu": "⚙️ <b>SETTINGS</b>\n\nSelect one of the settings:"
+        "settings_menu": "⚙️ <b>SETTINGS</b>\n\nSelect one of the settings:",
+        "data_exported": "📤 Your data has been exported.",
+        "error_export_data": "❌ Error exporting data.",
+        "backup_created": "💾 Backup created.",
+        "error_backup": "❌ Error creating backup.",
+        "error_language_change": "❌ Error changing language.",
+        "error_currency_change": "❌ Error changing currency.",
+        "incorrect_currency_selection": "❌ Incorrect currency selection. Please try again.",
+        "data_deletion_cancelled": "❌ Data deletion cancelled.",
+        "error_delete_data": "❌ Error deleting data.",
+        "incorrect_delete_selection": "❌ Invalid choice. Please try again."
     }
 }
 
