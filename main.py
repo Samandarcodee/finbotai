@@ -429,9 +429,22 @@ def setup_schedulers(app):
     """Setup scheduled tasks"""
     scheduler = AsyncIOScheduler()
     
+    # Create a wrapper function that provides the bot context
+    async def send_daily_push_wrapper():
+        from handlers.push import send_daily_push_to_all
+        return await send_daily_push_to_all(app)
+    
+    async def send_weekly_push_wrapper():
+        from handlers.push import send_weekly_push_to_all
+        return await send_weekly_push_to_all(app)
+    
+    async def send_monthly_goal_push_wrapper():
+        from handlers.push import send_monthly_goal_push_to_all
+        return await send_monthly_goal_push_to_all(app)
+    
     # Daily reminder at 9 AM
     scheduler.add_job(
-        send_daily_push, 
+        send_daily_push_wrapper, 
         'cron', 
         hour=9, 
         minute=0,
@@ -440,7 +453,7 @@ def setup_schedulers(app):
     
     # Weekly report on Monday at 8 AM
     scheduler.add_job(
-        send_weekly_push, 
+        send_weekly_push_wrapper, 
         'cron', 
         day_of_week='mon',
         hour=8, 
@@ -450,7 +463,7 @@ def setup_schedulers(app):
     
     # Monthly report on 1st of month at 8 AM
     scheduler.add_job(
-        send_monthly_goal_push, 
+        send_monthly_goal_push_wrapper, 
         'cron', 
         day=1,
         hour=8, 

@@ -14,7 +14,7 @@ DB_PATH = "finbot.db"
 def get_db_connection():
     """Get database connection"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(DB_PATH, timeout=20.0)
         conn.row_factory = sqlite3.Row
         return conn
     except Exception as e:
@@ -30,10 +30,10 @@ def init_db():
         # Users table
         c.execute('''
             CREATE TABLE IF NOT EXISTS users (
-                user_id INTEGER PRIMARY KEY,
+                        user_id INTEGER PRIMARY KEY,
                 username TEXT,
-                first_name TEXT,
-                last_name TEXT,
+                        first_name TEXT,
+                        last_name TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
@@ -41,8 +41,8 @@ def init_db():
         # User settings table with enhanced fields
         c.execute('''
             CREATE TABLE IF NOT EXISTS user_settings (
-                user_id INTEGER PRIMARY KEY,
-                language TEXT DEFAULT 'uz',
+                        user_id INTEGER PRIMARY KEY,
+                        language TEXT DEFAULT 'uz',
                 currency TEXT DEFAULT 'UZS',
                 notifications BOOLEAN DEFAULT 1,
                 auto_reports BOOLEAN DEFAULT 0,
@@ -90,8 +90,8 @@ def init_db():
         c.execute('''
             CREATE TABLE IF NOT EXISTS budgets (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                category TEXT,
+                        user_id INTEGER,
+                        category TEXT,
                 amount REAL,
                 spent REAL DEFAULT 0,
                 period TEXT DEFAULT 'monthly',
@@ -128,7 +128,7 @@ def init_db():
         c.execute('''
             CREATE TABLE IF NOT EXISTS export_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
+                        user_id INTEGER,
                 export_type TEXT,
                 file_path TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -139,7 +139,7 @@ def init_db():
         # Create indexes for better performance
         c.execute('CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON transactions(user_id, date)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_transactions_user_type ON transactions(user_id, type)')
-        c.execute('CREATE INDEX IF NOT EXISTS idx_goals_user_status ON goals(user_id, status)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_goals_user_id ON goals(user_id)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_budgets_user_category ON budgets(user_id, category)')
         
         conn.commit()
@@ -540,7 +540,7 @@ def get_currency_code(text):
         return "CNY"
     elif "yen" in text_lower or "jpy" in text_lower or "🇯🇵" in text:
         return "JPY"
-    return "UZS"
+    return "UZS" 
 
 def is_onboarded(user_id):
     """Check if user has completed onboarding"""
