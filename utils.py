@@ -108,3 +108,31 @@ def build_reply_keyboard(buttons, resize=True, one_time=False, add_navigation=Tr
 
 def is_navigation_command(text):
     return text.strip() in NAV_COMMANDS 
+
+def get_message(key, user_id=None, **kwargs):
+    """Get message in user's language"""
+    try:
+        from constants import MESSAGES
+        from db import get_user_language
+        
+        # Get user language, default to "uz"
+        if user_id:
+            language = get_user_language(user_id) or "uz"
+        else:
+            language = "uz"
+        
+        # Get message for the language
+        message = MESSAGES.get(language, {}).get(key, "")
+        
+        # Format message with kwargs if provided
+        if kwargs and message:
+            try:
+                message = message.format(**kwargs)
+            except KeyError:
+                # If formatting fails, return original message
+                pass
+        
+        return message
+    except Exception as e:
+        logger.exception(f"get_message error: {e}")
+        return f"Error: {key}" 

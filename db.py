@@ -630,3 +630,17 @@ def get_weekly_stats(user_id):
     except Exception as e:
         logger.exception(f"Error getting weekly stats: {e}")
         return 0, 0 
+
+def get_user_language(user_id):
+    """Get user language from database"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT language FROM user_settings WHERE user_id = ?", (user_id,))
+        row = c.fetchone()
+        conn.close()
+        if row and row[0]:
+            return row[0]
+    except Exception as e:
+        logger.exception(f"get_user_language error: {e}")
+    return "uz" 

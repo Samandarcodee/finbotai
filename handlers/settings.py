@@ -11,7 +11,7 @@ from loguru import logger
 from telegram.constants import ParseMode
 import json
 from datetime import datetime
-from utils import get_navigation_keyboard, build_reply_keyboard
+from utils import get_navigation_keyboard, build_reply_keyboard, get_message
 
 # Import start function from start handler
 from handlers.start import start
@@ -90,16 +90,15 @@ MESSAGES = {
 async def show_settings(update, context):
     """Show settings menu with improved navigation"""
     try:
-        from constants import MESSAGES
         user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
         if not user_id:
-            await update.message.reply_text(MESSAGES["uz"]["user_not_found"])
+            await update.message.reply_text(get_message("user_not_found", user_id))
             return ConversationHandler.END
             
         # Get fresh settings from database
         settings = get_user_settings(user_id)
         if not settings:
-            await update.message.reply_text(MESSAGES["uz"]["user_not_found"])
+            await update.message.reply_text(get_message("user_not_found", user_id))
             return ConversationHandler.END
             
         currency = settings.get('currency', 'UZS')
@@ -108,13 +107,14 @@ async def show_settings(update, context):
         auto_reports = settings.get('auto_reports', False)
         notif_status = "✅ Yoqilgan" if notifications else "❌ O'chirilgan"
         auto_status = "✅ Yoqilgan" if auto_reports else "❌ O'chirilgan"
+        
         text = (
-            f"⚙️ <b>SOZLAMALAR</b>\n\n"
+            f"{get_message('settings_title', user_id)}\n\n"
             f"💰 Valyuta: {currency}\n"
             f"🌐 Til: {language}\n"
             f"🔔 Bildirishnomalar: {notif_status}\n"
             f"📊 Avtomatik hisobotlar: {auto_status}\n\n"
-            "Sozlamalarni o'zgartirish uchun tugmalardan birini bosing:"
+            f"{get_message('settings_description', user_id)}"
         )
         keyboard = [
             ["💰 Valyutani o'zgartirish", "🌐 Tilni o'zgartirish"],
@@ -133,7 +133,7 @@ async def show_settings(update, context):
     except Exception as e:
         logger.exception(f"Settings error: {e}")
         if update.message:
-            await update.message.reply_text("❌ Sozlamalarni ko'rishda xatolik.")
+            await update.message.reply_text(get_message("settings_error", user_id))
 
 async def settings_handler(update, context):
     """Handle settings menu selection with enhanced options and navigation"""
@@ -356,7 +356,7 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
         # Show language options again
         keyboard = [[opt] for opt in LANGUAGE_OPTIONS] + [["🔙 Orqaga", "🏠 Bosh menyu"]]
         await update.message.reply_text(
-            "❌ Noto'g'ri tanlov. Iltimos, ro'yxatdan til tanlang:",
+            get_message("invalid_choice", user_id),
             reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         )
         return SETTINGS_LANGUAGE
@@ -373,7 +373,7 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
             logger.error(f"Database connection failed for user {user_id}")
             keyboard = [[opt] for opt in LANGUAGE_OPTIONS] + [["🔙 Orqaga", "🏠 Bosh menyu"]]
             await update.message.reply_text(
-                "❌ Baza bilan ulanishda xatolik. Keyinroq urinib ko'ring.",
+                get_message("db_connection_error", user_id),
                 reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
             )
             return SETTINGS_LANGUAGE
@@ -403,7 +403,10 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
         logger.info(f"Language change successful for user {user_id}")
         
         # Success message
-        await update.message.reply_text(f"✅ Til muvaffaqiyatli {text} ga o'zgartirildi.", reply_markup=ReplyKeyboardRemove())
+        await update.message.reply_text(
+            get_message("language_changed", user_id, language=text),
+            reply_markup=ReplyKeyboardRemove()
+        )
         
         # Return to main menu
         from handlers.start import show_main_menu
@@ -413,7 +416,7 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
         logger.exception(f"Language change error for user {user_id}: {e}")
         keyboard = [[opt] for opt in LANGUAGE_OPTIONS] + [["🔙 Orqaga", "🏠 Bosh menyu"]]
         await update.message.reply_text(
-            "❌ Tilni o'zgartirishda xatolik. Qayta urinib ko'ring:",
+            get_message("language_change_error", user_id),
             reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         )
         return SETTINGS_LANGUAGE
