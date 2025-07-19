@@ -39,12 +39,13 @@ async def ai_goal_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "🎯 Maqsad qo'yish":
         keyboard = [
             ["📝 Maqsad nomini kiriting"],
-            ["💡 Maqsad tavsiyalari"]
+            ["�� Maqsad tavsiyalari"],
+            ["🏠 Bosh menyu"]
         ]
         await update.message.reply_text(
             "🏆 <b>Maqsad qo'yish</b>\n\n"
             "Maqsad nomini kiriting (masalan: iPhone 15 Pro, O'qish, Safar):",
-            reply_markup=build_reply_keyboard(keyboard, resize=True),
+            reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False),
             parse_mode="HTML"
         )
         return 1  # Goal name state

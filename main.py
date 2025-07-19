@@ -182,9 +182,30 @@ async def message_handler(update, context):
         case "📈 Tahlil":
             return await show_analysis(update, user_id)
         case "🤖 AI vositalar":
-            return await show_ai_menu(update, user_id)
+            keyboard = [
+                ["🤖 AI Moliyaviy Maslahat", "📊 AI Xarajatlar Tahlili"],
+                ["💰 AI Byudjet Tavsiyasi", "🏆 AI Maqsad Monitoring"],
+                ["💡 AI Tejash Maslahatlari", "📈 AI Investitsiya Maslahati"],
+                ["🏠 Bosh menyu"]
+            ]
+            await update.message.reply_text(
+                "AI vositalaridan birini tanlang:",
+                reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False)
+            )
+            return
         case "⚙️ Sozlamalar/Yordam":
-            return await show_settings(update, user_id)
+            keyboard = [
+                ["💰 Valyutani o'zgartirish", "🌐 Tilni o'zgartirish"],
+                ["🔔 Bildirishnomalar", "📊 Avtomatik hisobotlar"],
+                ["📤 Ma'lumotlarni eksport qilish", "💾 Zaxira nusxasi"],
+                ["🗑️ Ma'lumotlarni o'chirish"],
+                ["🏠 Bosh menyu"]
+            ]
+            await update.message.reply_text(
+                "Sozlamalardan birini tanlang:",
+                reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False)
+            )
+            return
         case _:
             await update.message.reply_text("❌ Noto'g'ri tanlov. Bosh menyuga qaytmoqdamiz.")
             return await navigate_to_main_menu(update, context)
