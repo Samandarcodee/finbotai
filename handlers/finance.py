@@ -90,14 +90,15 @@ async def show_balance(update: Update, user_id: int):
         
         # Add navigation buttons
         keyboard = [
-            ["📈 Tahlil", "📊 Kategoriyalar"],
-            ["💰 Kirim/Chiqim"]
+            ["📈 Tahlil"],
+            ["💰 Kirim/Chiqim"],
+            ["🏠 Bosh menyu"]
         ]
         if update.message:
             await update.message.reply_text(
                 balance_text, 
                 parse_mode=ParseMode.HTML,
-                reply_markup=build_reply_keyboard(keyboard, resize=True)
+                reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False)
             )
     except sqlite3.Error as e:
         logger.exception(f"Balance error: {e}")
@@ -190,14 +191,15 @@ async def show_analysis(update: Update, user_id: int):
         
         # Add navigation buttons
         keyboard = [
-            ["📊 Balans", "📊 Kategoriyalar"],
-            ["💰 Kirim/Chiqim"]
+            ["📊 Balans"],
+            ["💰 Kirim/Chiqim"],
+            ["🏠 Bosh menyu"]
         ]
         if update.message:
             await update.message.reply_text(
                 analysis_text,
                 parse_mode=ParseMode.HTML,
-                reply_markup=build_reply_keyboard(keyboard, resize=True)
+                reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False)
             )
         
     except sqlite3.Error as e:
@@ -282,7 +284,7 @@ async def income_category_selected(update: Update, context: ContextTypes.DEFAULT
     context.user_data['selected_income_category'] = selected_category
     keyboard = [
         ["💵 Kirim qo'shish", "💸 Chiqim qo'shish"],
-        ["�� Bosh menyu"]
+        ["🏠 Bosh menyu"]
     ]
     await update.message.reply_text(
         f"✅ Kategoriya: {selected_category}\n\nKirim miqdorini kiriting (masalan: 1 000 000):",
