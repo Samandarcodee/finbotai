@@ -78,10 +78,12 @@ async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu", "🏠 Bosh menyu"]:
         return await start(update, context)
     elif text in ["💰 Valyutani o'zgartirish", "💰 Изменить валюту", "💰 Change currency"]:
-        reply_markup = ReplyKeyboardMarkup(
-            [[c] for c in MESSAGES["uz"]["currencies"]] + [[MESSAGES["uz"]["main_menu"]]],
-            resize_keyboard=True, one_time_keyboard=True
-        )
+        reply_markup = ReplyKeyboardMarkup([
+            ["🇺🇿 So'm", "💵 Dollar", "💶 Euro"],
+            ["🇷🇺 Rubl", "🇰🇿 Tenge", "🇰🇬 Som"],
+            ["🇹🇷 Lira", "🇨🇳 Yuan", "🇯🇵 Yen"],
+            ["🔙 Orqaga"]
+        ], resize_keyboard=True, one_time_keyboard=True)
         await update.message.reply_text(MESSAGES["uz"]["choose_currency"], reply_markup=reply_markup)
         return 9
     elif text == "🗑️ Ma'lumotlarni o'chirish":
@@ -111,12 +113,21 @@ async def currency_selection_handler(update: Update, context: ContextTypes.DEFAU
         "🇺🇿 So'm": "UZS",
         "💵 Dollar": "USD",
         "💶 Euro": "EUR",
+        "🇷🇺 Rubl": "RUB",
+        "🇰🇿 Tenge": "KZT",
+        "🇰🇬 Som": "KGS",
+        "🇹🇷 Lira": "TRY",
+        "🇨🇳 Yuan": "CNY",
+        "🇯🇵 Yen": "JPY",
         "🇺🇿 Сум": "UZS",
         "💵 Доллар": "USD",
         "💶 Евро": "EUR",
-        "🇺🇿 So'm": "UZS",
-        "💵 Dollar": "USD",
-        "💶 Euro": "EUR"
+        "🇷🇺 Рубль": "RUB",
+        "🇰🇿 Тенге": "KZT",
+        "🇰🇬 Сом": "KGS",
+        "🇹🇷 Лира": "TRY",
+        "🇨🇳 Юань": "CNY",
+        "🇯🇵 Иена": "JPY"
     }
     
     if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu", "🏠 Bosh menyu"]:

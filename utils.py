@@ -7,8 +7,14 @@ from db import get_db_connection
 # Currency symbols
 CURRENCY_SYMBOLS = {
     "UZS": "so'm",
+    "USD": "$",
+    "EUR": "€",
     "RUB": "₽",
-    "USD": "$"
+    "KZT": "₸",
+    "KGS": "с",
+    "TRY": "₺",
+    "CNY": "¥",
+    "JPY": "¥"
 }
 
 def get_user_language(user_id):

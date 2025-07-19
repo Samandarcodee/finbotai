@@ -163,13 +163,25 @@ def set_onboarded(user_id):
 def get_currency_code(text):
     """Extract currency code from text"""
     if text is None:
-        return "so'm"
+        return "UZS"
     
     text_lower = text.lower()
-    if "so'm" in text_lower or "uz" in text_lower:
-        return "so'm"
-    elif "dollar" in text_lower or "$" in text or "usd" in text_lower():
+    if "so'm" in text_lower or "uz" in text_lower or "🇺🇿" in text:
+        return "UZS"
+    elif "dollar" in text_lower or "$" in text or "usd" in text_lower or "💵" in text:
         return "USD"
-    elif "euro" in text_lower or "eur" in text_lower():
+    elif "euro" in text_lower or "eur" in text_lower or "💶" in text:
         return "EUR"
-    return "so'm" 
+    elif "rubl" in text_lower or "rub" in text_lower or "🇷🇺" in text:
+        return "RUB"
+    elif "tenge" in text_lower or "kzt" in text_lower or "🇰🇿" in text:
+        return "KZT"
+    elif "som" in text_lower or "kgs" in text_lower or "🇰🇬" in text:
+        return "KGS"
+    elif "lira" in text_lower or "try" in text_lower or "🇹🇷" in text:
+        return "TRY"
+    elif "yuan" in text_lower or "cny" in text_lower or "🇨🇳" in text:
+        return "CNY"
+    elif "yen" in text_lower or "jpy" in text_lower or "🇯🇵" in text:
+        return "JPY"
+    return "UZS" 

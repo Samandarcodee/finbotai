@@ -114,7 +114,9 @@ async def onboarding_language(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(
             currency_text,
             reply_markup=ReplyKeyboardMarkup([
-                ["🇺🇿 So'm", "💵 Dollar", "💶 Euro"]
+                ["🇺🇿 So'm", "💵 Dollar", "💶 Euro"],
+                ["🇷🇺 Rubl", "🇰🇿 Tenge", "🇰🇬 Som"],
+                ["🇹🇷 Lira", "🇨🇳 Yuan", "🇯🇵 Yen"]
             ], resize_keyboard=True, one_time_keyboard=True)
         )
         logger.info(f"Returning ONBOARDING_CURRENCY state: {ONBOARDING_CURRENCY}")
