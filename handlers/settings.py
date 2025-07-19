@@ -330,8 +330,10 @@ async def create_backup(update, context):
             await update.message.reply_text("❌ Zaxira nusxasi yaratishda xatolik.")
 
 async def language_selection_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle language selection with improved error handling"""
     if not update.message or not update.message.text:
         return ConversationHandler.END
+    
     text = update.message.text.strip()
     user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     if not user_id:
@@ -344,14 +346,16 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
     if text == "🔙 Orqaga":
         return await show_settings(update, context)
     
-    # Tilni aniqlash
-    if "O'zbek" in text or "🇺🇿" in text:
+    # Tilni aniqlash - to'g'ri matnlar bilan
+    language = None
+    if text == "🇺🇿 O'zbekcha":
         language = "uz"
-    elif "Русский" in text or "🇷🇺" in text:
+    elif text == "🇷🇺 Русский":
         language = "ru"
-    elif "English" in text or "🇺🇸" in text:
+    elif text == "🇺🇸 English":
         language = "en"
-    else:
+    
+    if language is None:
         # Show language options again with better error message
         reply_markup = build_reply_keyboard([
             ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"],
