@@ -27,7 +27,10 @@ from handlers.finance import (
     show_balance, show_analysis, show_categories, show_budget_status,
     export_data, show_records, get_category_keyboard, cancel
 )
-from handlers.ai import show_ai_advice, show_ai_analysis
+from handlers.ai import (
+    show_ai_menu, show_ai_advice, show_ai_analysis, show_budget_advice,
+    show_savings_tips, show_investment_advice, show_goal_monitoring, handle_ai_menu
+)
 from handlers.push import (
     push_command, push_topic_handler, push_confirm_handler,
     send_daily_push, send_weekly_push, send_monthly_goal_push, 
@@ -35,7 +38,7 @@ from handlers.push import (
 )
 from handlers.settings import (
     show_settings, settings_handler, currency_selection_handler, 
-    delete_data_handler
+    language_selection_handler, delete_data_handler
 )
 from handlers.goals import (
     ai_goal_start, ai_goal_name, ai_goal_amount, ai_goal_deadline,
@@ -61,6 +64,9 @@ logger.add("finbot.log", rotation="1 day", retention="7 days", level="INFO")
 ASK_SUPPORT = 100
 INCOME_AMOUNT, INCOME_NOTE = 101, 102
 EXPENSE_AMOUNT, EXPENSE_NOTE = 201, 202
+SETTINGS_CURRENCY = 9
+SETTINGS_LANGUAGE = 10
+SETTINGS_DELETE = 7
 
 # Import utils for shared functions
 from utils import get_user_language, get_user_currency, format_amount
@@ -82,7 +88,9 @@ MESSAGES = {
         "completion_minimal": "🎉 Onboarding yakunlandi!\n\n✅ Til va valyuta sozlandi\n⏭ Daromad va maqsad o'tkazib yuborildi\n\n🏠 Asosiy menyudan foydalanishingiz mumkin!",
         "error_format": "❌ Noto'g'ri format! Masalan: 3 000 000 yoki 5000000.\n\nYoki ⏭ O'tkazib yuborish tugmasini bosing.",
         "error_general": "❌ Xatolik yuz berdi. Qaytadan urinib ko'ring.",
-        "user_not_found": "❌ Foydalanuvchi ma'lumotlari topilmadi."
+        "user_not_found": "❌ Foydalanuvchi ma'lumotlari topilmadi.",
+        "ai_menu": "🤖 <b>AI VOSITALAR</b>\n\nQuyidagi AI funksiyalaridan birini tanlang:",
+        "settings_menu": "⚙️ <b>SOZLAMALAR</b>\n\nQuyidagi sozlamalardan birini tanlang:"
     },
     "ru": {
         "main_menu": "🏠 Главное меню",
@@ -99,7 +107,9 @@ MESSAGES = {
         "completion_minimal": "🎉 Настройка завершена!\n\n✅ Язык и валюта настроены\n⏭ Доход и цель пропущены\n\n🏠 Можете использовать главное меню!",
         "error_format": "❌ Неправильный формат! Например: 3 000 000 или 5000000.\n\nИли нажмите кнопку ⏭ Пропустить.",
         "error_general": "❌ Произошла ошибка. Попробуйте снова.",
-        "user_not_found": "❌ Данные пользователя не найдены."
+        "user_not_found": "❌ Данные пользователя не найдены.",
+        "ai_menu": "🤖 <b>AI ИНСТРУМЕНТЫ</b>\n\nВыберите одну из AI функций:",
+        "settings_menu": "⚙️ <b>НАСТРОЙКИ</b>\n\nВыберите одну из настроек:"
     },
     "en": {
         "main_menu": "🏠 Main Menu",
@@ -116,7 +126,9 @@ MESSAGES = {
         "completion_minimal": "🎉 Setup completed!\n\n✅ Language and currency set\n⏭ Income and goal skipped\n\n🏠 You can use the main menu!",
         "error_format": "❌ Wrong format! For example: 3 000 000 or 5000000.\n\nOr press the ⏭ Skip button.",
         "error_general": "❌ An error occurred. Please try again.",
-        "user_not_found": "❌ User data not found."
+        "user_not_found": "❌ User data not found.",
+        "ai_menu": "🤖 <b>AI TOOLS</b>\n\nSelect one of the AI functions:",
+        "settings_menu": "⚙️ <b>SETTINGS</b>\n\nSelect one of the settings:"
     }
 }
 
@@ -215,7 +227,7 @@ async def admin_reply(update, context):
                 await update.message.reply_text(f"Xatolik: {e}")
 
 async def message_handler(update, context):
-    """Main message handler"""
+    """Main message handler with enhanced AI and settings support"""
     if not update.message or not update.message.text or not hasattr(update.message, 'from_user'):
         return
     text = update.message.text
@@ -245,92 +257,41 @@ async def message_handler(update, context):
         )
         return ConversationHandler.END
     elif text == "🤖 AI vositalar":
-        await update.message.reply_text(
-            "AI vositalaridan birini tanlang:",
-            reply_markup=ReplyKeyboardMarkup([
-                ["🤖 AI maslahat", "📊 AI Tahlil"],
-                ["🤖 AI Byudjet", "🎯 AI Maqsad"],
-                ["🔙 Orqaga"]
-            ], resize_keyboard=True, one_time_keyboard=True)
-        )
-        return ConversationHandler.END
+        return await show_ai_menu(update, user_id)
     elif text == "⚙️ Sozlamalar/Yordam":
-        await update.message.reply_text(
-            "Sozlamalar yoki yordam bo'limini tanlang:",
-            reply_markup=ReplyKeyboardMarkup([
-                ["⚙️ Sozlamalar", "❓ Yordam"],
-                ["🔙 Orqaga"]
-            ], resize_keyboard=True, one_time_keyboard=True)
-        )
-        return ConversationHandler.END
-    # MODUL ichidan orqaga
-    elif text == "🔙 Orqaga":
-        keyboard = get_keyboard(user_id)
-        await update.message.reply_text(
-            "Asosiy modullar menyusi:",
-            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-        )
-        return ConversationHandler.END
-    # Kirim/Chiqim tugmalari
-    elif text == "💵 Kirim qo'shish":
-        await update.message.reply_text(
-            "💵 Kirim uchun kategoriya tanlang:",
-            reply_markup=get_category_keyboard(is_income=True)
-        )
-        return 4
-    elif text == "💸 Chiqim qo'shish":
-        await update.message.reply_text(
-            "💸 Chiqim uchun kategoriya tanlang:",
-            reply_markup=get_category_keyboard(is_income=False)
-        )
-        return 3
-    # Balans/Tahlil tugmalari
-    elif text == "📊 Balans":
-        return await show_balance(update, user_id)
-    elif text == "📈 Tahlil":
-        return await show_analysis(update, user_id)
-    # AI vositalari
-    elif text == "🤖 AI maslahat":
-        return await show_ai_advice(update, user_id)
-    elif text == "📊 AI Tahlil":
-        return await show_ai_analysis(update, user_id)
-    elif text == "🤖 AI Byudjet":
-        return await ai_budget_start(update, context)
-    elif text == "🎯 AI Maqsad":
-        return await ai_goal_start(update, context)
-    # Sozlamalar/Yordam
-    elif text == "⚙️ Sozlamalar":
         return await show_settings(update, user_id)
-    elif text == "❓ Yordam":
-        return await help_command(update, context)
-    # Default
     else:
-        keyboard = get_keyboard(user_id)
-        await update.message.reply_text(MESSAGES["uz"]["invalid_choice"], reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
+        await update.message.reply_text(get_message("invalid_choice", user_id))
         return ConversationHandler.END
 
 async def inline_button_handler(update, context):
     """Handle inline button callbacks"""
-    query = getattr(update, 'callback_query', None)
-    if not query or not hasattr(query, 'from_user'):
-        return ConversationHandler.END
-    user_id = getattr(query.from_user, 'id', None)
-    if user_id is None:
-        return ConversationHandler.END
+    if not update.callback_query:
+        return
+    
+    query = update.callback_query
     await query.answer()
-    if query.data == "show_balance":
-        await show_balance(update, int(user_id))
-    elif query.data == "show_analysis":
-        await show_analysis(update, int(user_id))
-    elif query.data == "show_ai_advice":
-        await show_ai_advice(update, int(user_id))
+    
+    if query.data.startswith("balance_"):
+        user_id = query.from_user.id
+        await show_balance(update, user_id)
+    elif query.data.startswith("analysis_"):
+        user_id = query.from_user.id
+        await show_analysis(update, user_id)
+    elif query.data.startswith("ai_advice_"):
+        user_id = query.from_user.id
+        await show_ai_advice(update, user_id)
+    elif query.data.startswith("ai_analysis_"):
+        user_id = query.from_user.id
+        await show_ai_analysis(update, user_id)
 
 async def show_stats(update, context):
-    """Show admin statistics"""
+    """Show bot statistics for admin"""
+    if not update.message or not hasattr(update.message, 'from_user'):
+        return
+    
     user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
-    if user_id != ADMIN_ID or not update.message:
-        if update.message:
-            await update.message.reply_text("❌ Sizda ruxsat yo'q.")
+    if user_id != ADMIN_ID:
         return
     
     try:
@@ -342,36 +303,48 @@ async def show_stats(update, context):
         
         c = conn.cursor()
         
-        # Get statistics
-        c.execute("SELECT COUNT(DISTINCT user_id) FROM users")
-        total_users = c.fetchone()[0] or 0
+        # Get user count
+        c.execute("SELECT COUNT(*) FROM users")
+        user_count = c.fetchone()[0]
         
+        # Get transaction count
         c.execute("SELECT COUNT(*) FROM transactions")
-        total_transactions = c.fetchone()[0] or 0
+        transaction_count = c.fetchone()[0]
         
-        c.execute("SELECT COUNT(*) FROM transactions WHERE date >= date('now', '-7 days')")
-        weekly_transactions = c.fetchone()[0] or 0
+        # Get today's transactions
+        today = datetime.now().strftime("%Y-%m-%d")
+        c.execute("SELECT COUNT(*) FROM transactions WHERE date LIKE ?", (f"{today}%",))
+        today_transactions = c.fetchone()[0]
+        
+        # Get active goals
+        c.execute("SELECT COUNT(*) FROM goals WHERE status = 'active'")
+        active_goals = c.fetchone()[0]
         
         conn.close()
         
-        stats_text = (
-            "📊 <b>STATISTIKA</b>\n\n"
-            f"👥 Jami foydalanuvchilar: {total_users}\n"
-            f"💳 Jami tranzaksiyalar: {total_transactions}\n"
-            f"📈 Haftalik tranzaksiyalar: {weekly_transactions}\n"
-        )
+        stats_text = f"""📊 <b>Bot statistikasi:</b>
+
+👥 <b>Foydalanuvchilar:</b> {user_count}
+💰 <b>Jami tranzaksiyalar:</b> {transaction_count}
+📅 <b>Bugungi tranzaksiyalar:</b> {today_transactions}
+🎯 <b>Faol maqsadlar:</b> {active_goals}
+
+⏰ <b>Vaqt:</b> {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}"""
         
         await update.message.reply_text(stats_text, parse_mode="HTML")
         
     except Exception as e:
         logger.exception(f"Stats error: {e}")
-        await update.message.reply_text("❌ Statistika olishda xatolik.")
+        await update.message.reply_text("❌ Statistikani olishda xatolik.")
 
 async def show_history(update, context):
-    """Show user history"""
+    """Show recent transactions for admin"""
+    if not update.message or not hasattr(update.message, 'from_user'):
+        return
+    
     user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
-    if user_id is None or not update.message:
-            return
+    if user_id != ADMIN_ID:
+        return
     
     try:
         from db import get_db_connection
@@ -382,217 +355,171 @@ async def show_history(update, context):
         
         c = conn.cursor()
         
-        # Get user info
-        c.execute("SELECT joined_at FROM users WHERE user_id = ?", (user_id,))
-        joined_at = c.fetchone()
-        joined_at_str = joined_at[0][:10] if joined_at and joined_at[0] else "-"
+        # Get recent transactions
+        c.execute("""
+            SELECT t.user_id, t.type, t.amount, t.category, t.date, u.first_name
+            FROM transactions t
+            LEFT JOIN users u ON t.user_id = u.user_id
+            ORDER BY t.date DESC
+            LIMIT 10
+        """)
         
-        # Get transaction counts
-        c.execute("SELECT COUNT(*) FROM transactions WHERE user_id = ?", (user_id,))
-        total_ops = c.fetchone()[0] or 0
-        
-        # Get total amounts
-        c.execute("SELECT SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) FROM transactions WHERE user_id = ?", (user_id,))
-        sums = c.fetchone()
-        total_income = sums[0] or 0
-        total_expense = sums[1] or 0
-        saved = total_income - total_expense
-        
+        transactions = c.fetchall()
         conn.close()
         
-        text = (
-            "📜 <b>Harakatlar tarixi</b>\n\n"
-            f"👤 <b>Botga kirgan sana:</b> {joined_at_str}\n"
-            f"📊 <b>Qo'shgan kirim/chiqimlar soni:</b> {total_ops} ta\n"
-            f"💰 <b>Tejalgan umumiy miqdor:</b> {format_amount(saved, user_id)}\n"
-        )
-        await update.message.reply_text(text, parse_mode="HTML")
+        if not transactions:
+            await update.message.reply_text("📝 Hozircha tranzaksiyalar yo'q.")
+            return
+        
+        history_text = "📝 <b>So'nggi tranzaksiyalar:</b>\n\n"
+        
+        for t in transactions:
+            user_name = t[5] or f"User {t[0]}"
+            amount = format_amount(t[2], t[0])
+            date = t[4][:10] if t[4] else "N/A"
+            emoji = "💵" if t[1] == "income" else "💸"
+            
+            history_text += f"{emoji} <b>{user_name}</b> - {amount} ({t[3]})\n📅 {date}\n\n"
+        
+        await update.message.reply_text(history_text, parse_mode="HTML")
         
     except Exception as e:
         logger.exception(f"History error: {e}")
-        await update.message.reply_text("❌ Tarixni ko'rishda xatolik.")
+        await update.message.reply_text("❌ Tarixni olishda xatolik.")
 
 async def admin_panel(update, context):
-    """Admin panel handler"""
-    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
-    if user_id != ADMIN_ID or not update.message:
-        if update.message:
-            await update.message.reply_text("❌ Sizda ruxsat yo'q.")
+    """Admin panel for bot management"""
+    if not update.message or not hasattr(update.message, 'from_user'):
         return
     
-    try:
-        from db import get_db_connection
-        conn = get_db_connection()
-        if conn is None:
-            await update.message.reply_text("❌ Ma'lumotlar bazasiga ulanishda xatolik.")
-            return
-        
-        c = conn.cursor()
-        
-        # Get daily stats
-        today = datetime.now().strftime("%Y-%m-%d")
-        c.execute("SELECT COUNT(DISTINCT user_id) FROM transactions WHERE date(date) = ?", (today,))
-        active_users = c.fetchone()[0] or 0
-        
-        c.execute("SELECT COUNT(*) FROM transactions WHERE date(date) = ?", (today,))
-        ops_today = c.fetchone()[0] or 0
-        
-        # Get most active user
-        c.execute("""
-        SELECT u.first_name, u.username, COUNT(t.user_id) as cnt
-            FROM users u JOIN transactions t ON u.user_id = t.user_id
-            WHERE date(t.date) = ?
-        GROUP BY u.user_id
-        ORDER BY cnt DESC
-        LIMIT 1
-        """, (today,))
-        row = c.fetchone()
-        if row:
-            most_active = f"{row[0] or ''} (@{row[1] or ''}) - {row[2]} ta"
-        else:
-            most_active = "Yo'q"
-        
-        conn.close()
-        
-        # Get server logs
-        log_tail = ""
-        try:
-            with open("errorlog.txt", "r", encoding="utf-8") as f:
-                lines = f.readlines()
-                log_tail = ''.join(lines[-10:]) if lines else "Loglar yo'q."
-        except Exception:
-            log_tail = "Loglar yo'q."
-        
-        text = (
-            "<b>🔧 Admin Panel</b>\n\n"
-            f"👥 <b>Kunlik faol foydalanuvchilar:</b> {active_users}\n"
-            f"💳 <b>Bugun qo'shilgan kirim/chiqimlar:</b> {ops_today} ta\n"
-            f"🏆 <b>Eng faol foydalanuvchi:</b> {most_active}\n\n"
-            f"<b>📋 Server loglari (oxirgi 10 qator):</b>\n<pre>{log_tail}</pre>"
-        )
-        await update.message.reply_text(text, parse_mode="HTML")
-        
-    except Exception as e:
-        logger.exception(f"Admin panel error: {e}")
-        await update.message.reply_text("❌ Admin panelda xatolik.")
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+    if user_id != ADMIN_ID:
+        return
+    
+    admin_text = """🔧 <b>Admin paneli</b>
+
+📊 <b>Statistika:</b>
+• /stats - Bot statistikasi
+• /history - So'nggi tranzaksiyalar
+
+👥 <b>Foydalanuvchilar:</b>
+• /users - Foydalanuvchilar ro'yxati
+• /notify - Barcha foydalanuvchilarga xabar
+
+🤖 <b>Bot boshqaruvi:</b>
+• /restart - Botni qayta ishga tushirish
+• /backup - Ma'lumotlar bazasini zaxiralash
+
+📈 <b>Monitoring:</b>
+• /logs - Log fayllarini ko'rish
+• /errors - Xatoliklarni ko'rish"""
+
+    await update.message.reply_text(admin_text, parse_mode="HTML")
 
 async def global_error_handler(update, context):
     """Global error handler"""
-    try:
-        if update and hasattr(update, 'message') and update.message:
-            await update.message.reply_text(MESSAGES["uz"]["error_soft"])
-        # Send error to admin
-        error_text = f"[Xatolik]\nUser: {getattr(getattr(update, 'message', None), 'from_user', None)}\nError: {context.error}"
-        await context.bot.send_message(chat_id=ADMIN_ID, text=error_text)
-    except Exception:
-        pass
+    logger.exception(f"Exception while handling an update: {context.error}")
+    
+    if update and update.effective_message:
+        await update.effective_message.reply_text(
+            get_message("error_soft", update.effective_user.id if update.effective_user else None)
+        )
 
 def setup_schedulers(app):
     """Setup scheduled tasks"""
-    try:
-        scheduler = AsyncIOScheduler()
-        scheduler.add_job(lambda: send_daily_push(app), 'cron', hour=8, minute=0)
-        scheduler.add_job(lambda: send_weekly_push(app), 'cron', day_of_week='sun', hour=8, minute=0)
-        scheduler.add_job(lambda: send_monthly_goal_push(app), 'cron', day=1, hour=8, minute=0)
-        scheduler.add_job(lambda: send_monthly_feedback_push(app), 'cron', day=1, hour=12, minute=0)
-        scheduler.start()
-        logger.info("Scheduler started successfully")
-    except Exception as e:
-        logger.error(f"Failed to start scheduler: {e}")
-        # Continue without scheduler if it fails
+    scheduler = AsyncIOScheduler()
+    
+    # Daily reminder at 9 AM
+    scheduler.add_job(
+        send_daily_push, 
+        'cron', 
+        hour=9, 
+        minute=0,
+        id='daily_reminder'
+    )
+    
+    # Weekly report on Monday at 8 AM
+    scheduler.add_job(
+        send_weekly_push, 
+        'cron', 
+        day_of_week='mon',
+        hour=8, 
+        minute=0,
+        id='weekly_report'
+    )
+    
+    # Monthly report on 1st of month at 8 AM
+    scheduler.add_job(
+        send_monthly_goal_push, 
+        'cron', 
+        day=1,
+        hour=8, 
+        minute=0,
+        id='monthly_report'
+    )
+    
+    scheduler.start()
+    return scheduler
 
 def main():
     """Main function to start the bot"""
-    logger.info("FinBot AI ishga tushmoqda...")
-    
-    # Initialize database
-    init_db()
-    
-    # Build application
-    if not BOT_TOKEN:
-        logger.error("BOT_TOKEN topilmadi!")
-        return
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_error_handler(global_error_handler)
-
-    # Support conversation handler
-    support_conv_handler = ConversationHandler(
-        entry_points=[
-            MessageHandler(filters.Regex("❓ Yordam"), help_command),
-            CommandHandler("help", help_command)
-        ],
-        states={
-            ASK_SUPPORT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_support_message)],
-        },
-        fallbacks=[CommandHandler("cancel", cancel)]
-    )
-
-    # Main conversation handler - commented out to avoid conflicts
-    # main_conv_handler = ConversationHandler(
-    #     entry_points=[MessageHandler(
-    #         filters.Regex(r"^(💰 Kirim/Chiqim|📊 Balans/Tahlil|🤖 AI vositalar|⚙️ Sozlamalar/Yordam)$"),
-    #         message_handler
-    #     )],
-    #     states={
-    #         INCOME_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, income_amount)],
-    #         INCOME_NOTE: [MessageHandler(filters.TEXT & ~filters.COMMAND, income_note)],
-    #         EXPENSE_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, expense_amount)],
-    #         EXPENSE_NOTE: [MessageHandler(filters.TEXT & ~filters.COMMAND, expense_note)],
-    #         3: [MessageHandler(filters.TEXT & ~filters.COMMAND, expense_category_selected)],
-    #         4: [MessageHandler(filters.TEXT & ~filters.COMMAND, income_category_selected)],
-    #         5: [MessageHandler(filters.TEXT & ~filters.COMMAND, settings_handler)],
-    #         6: [MessageHandler(filters.TEXT & ~filters.COMMAND, currency_selection_handler)],
-    #         7: [MessageHandler(filters.TEXT & ~filters.COMMAND, delete_data_handler)],
-    #         9: [MessageHandler(filters.TEXT & ~filters.COMMAND, currency_selection_handler)],
-    #     },
-    #     fallbacks=[CommandHandler("cancel", cancel)]
-    # )
-
-    # Add all handlers
-    app.add_handler(support_conv_handler)
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("cancel", cancel))
-    app.add_handler(MessageHandler(filters.Regex("^/reply_"), admin_reply))
-    app.add_handler(CommandHandler("stat", show_stats))
-    app.add_handler(push_conv_handler)
-    app.add_handler(ai_budget_conv_handler)
-    app.add_handler(ai_goal_conv_handler)
-    app.add_handler(CallbackQueryHandler(inline_button_handler))
-    app.add_handler(onboarding_conv_handler)
-    app.add_handler(CommandHandler("history", show_history))
-    app.add_handler(CommandHandler("admin_panel", admin_panel))
-    
-    # Main conversation handler for all text messages
-    main_conv_handler = ConversationHandler(
-        entry_points=[MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler)],
-        states={
-            INCOME_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, income_amount)],
-            INCOME_NOTE: [MessageHandler(filters.TEXT & ~filters.COMMAND, income_note)],
-            EXPENSE_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, expense_amount)],
-            EXPENSE_NOTE: [MessageHandler(filters.TEXT & ~filters.COMMAND, expense_note)],
-            3: [MessageHandler(filters.TEXT & ~filters.COMMAND, expense_category_selected)],
-            4: [MessageHandler(filters.TEXT & ~filters.COMMAND, income_category_selected)],
-            5: [MessageHandler(filters.TEXT & ~filters.COMMAND, settings_handler)],
-            6: [MessageHandler(filters.TEXT & ~filters.COMMAND, currency_selection_handler)],
-            7: [MessageHandler(filters.TEXT & ~filters.COMMAND, delete_data_handler)],
-            9: [MessageHandler(filters.TEXT & ~filters.COMMAND, currency_selection_handler)],
-        },
-        fallbacks=[CommandHandler("cancel", cancel)]
-    )
-    
-    app.add_handler(main_conv_handler)
-    
-    # Add AI and Budget conversation handlers
-    app.add_handler(ai_goal_conv_handler)
-    app.add_handler(ai_budget_conv_handler)
-    app.add_handler(push_conv_handler)
-
-    # Setup schedulers
-    setup_schedulers(app)
-    
-    # Start polling
-    logger.info("Bot ishga tushdi!")
-    app.run_polling()
+    try:
+        # Initialize database
+        init_db()
+        
+        # Create application
+        app = ApplicationBuilder().token(BOT_TOKEN).build()
+        
+        # Add conversation handlers
+        app.add_handler(onboarding_conv_handler)
+        app.add_handler(push_conv_handler)
+        app.add_handler(ai_goal_conv_handler)
+        app.add_handler(ai_budget_conv_handler)
+        
+        # Add settings conversation handlers
+        settings_conv_handler = ConversationHandler(
+            entry_points=[MessageHandler(filters.Regex("^⚙️ Sozlamalar/Yordam$"), lambda u, c: show_settings(u, u.effective_user.id))],
+            states={
+                SETTINGS_CURRENCY: [MessageHandler(filters.TEXT & ~filters.COMMAND, currency_selection_handler)],
+                SETTINGS_LANGUAGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, language_selection_handler)],
+                SETTINGS_DELETE: [MessageHandler(filters.TEXT & ~filters.COMMAND, delete_data_handler)],
+            },
+            fallbacks=[MessageHandler(filters.Regex("^(🔙 Orqaga|/start|/cancel)$"), lambda u, c: start(u, c))]
+        )
+        app.add_handler(settings_conv_handler)
+        
+        # Add AI menu handler
+        ai_conv_handler = ConversationHandler(
+            entry_points=[MessageHandler(filters.Regex("^🤖 AI vositalar$"), lambda u, c: show_ai_menu(u, u.effective_user.id))],
+            states={},
+            fallbacks=[MessageHandler(filters.TEXT & ~filters.COMMAND, handle_ai_menu)]
+        )
+        app.add_handler(ai_conv_handler)
+        
+        # Add command handlers
+        app.add_handler(CommandHandler("start", start))
+        app.add_handler(CommandHandler("help", help_command))
+        app.add_handler(CommandHandler("stats", show_stats))
+        app.add_handler(CommandHandler("history", show_history))
+        app.add_handler(CommandHandler("admin", admin_panel))
+        
+        # Add message handlers
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
+        app.add_handler(CallbackQueryHandler(inline_button_handler))
+        
+        # Add error handler
+        app.add_error_handler(global_error_handler)
+        
+        # Setup schedulers
+        scheduler = setup_schedulers(app)
+        
+        # Start the bot
+        logger.info("Bot ishga tushdi!")
+        app.run_polling()
+        
+    except Exception as e:
+        logger.exception(f"Bot ishga tushishda xatolik: {e}")
+        raise
 
 if __name__ == "__main__":
     main() 
