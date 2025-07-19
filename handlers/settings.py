@@ -111,12 +111,13 @@ async def show_settings(update: Update, user_id: int):
             ["💰 Valyutani o'zgartirish", "🌐 Tilni o'zgartirish"],
             ["🔔 Bildirishnomalar", "📊 Avtomatik hisobotlar"],
             ["📤 Ma'lumotlarni eksport qilish", "💾 Zaxira nusxasi"],
-            ["🗑️ Ma'lumotlarni o'chirish"]
+            ["🗑️ Ma'lumotlarni o'chirish"],
+            ["🏠 Bosh menyu"]
         ]
         if update.message:
             await update.message.reply_text(
                 text, 
-                reply_markup=build_reply_keyboard(keyboard, resize=True),
+                reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False),
                 parse_mode=ParseMode.HTML
             )
             return 5  # Return the main settings menu state

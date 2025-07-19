@@ -39,12 +39,13 @@ async def ai_budget_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "💰 AI Byudjet yaratish":
         keyboard = [
             ["📝 Oylik daromadni kiriting"],
-            ["💡 Daromad tavsiyalari"]
+            ["💡 Daromad tavsiyalari"],
+            ["🏠 Bosh menyu"]
         ]
         await update.message.reply_text(
             "💰 <b>AI Byudjet yaratish</b>\n\n"
             "Oylik daromadingizni kiriting (masalan: 3 000 000):",
-            reply_markup=build_reply_keyboard(keyboard, resize=True),
+            reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False),
             parse_mode="HTML"
         )
         return 1  # Budget income state

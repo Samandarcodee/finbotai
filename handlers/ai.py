@@ -73,12 +73,13 @@ async def show_ai_menu(update: Update, user_id: int):
         keyboard = [
             ["🤖 AI Moliyaviy Maslahat", "📊 AI Xarajatlar Tahlili"],
             ["💰 AI Byudjet Tavsiyasi", "🏆 AI Maqsad Monitoring"],
-            ["💡 AI Tejash Maslahatlari", "📈 AI Investitsiya Maslahati"]
+            ["💡 AI Tejash Maslahatlari", "📈 AI Investitsiya Maslahati"],
+            ["🏠 Bosh menyu"]
         ]
         if update.message:
             await update.message.reply_text(
                 ai_menu_text,
-                reply_markup=build_reply_keyboard(keyboard, resize=True),
+                reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False),
                 parse_mode="HTML"
             )
         return 100  # AI menu state

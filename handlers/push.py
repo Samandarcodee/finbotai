@@ -49,8 +49,8 @@ async def push_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ["📊 Haftalik hisobot"],
             ["🏆 Oylik maqsad"],
             ["🙏 Fikr so'rash"],
-            ["❌ Bekor qilish"]
-        ], resize=True, one_time=True)
+            ["🏠 Bosh menyu"]
+        ], resize=True, one_time=True, add_navigation=False)
     )
     return PUSH_TOPIC
 
