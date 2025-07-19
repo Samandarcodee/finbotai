@@ -67,19 +67,32 @@ async def onboarding_currency(update: Update, context: ContextTypes.DEFAULT_TYPE
         return ConversationHandler.END
     text = update.message.text
     user_id = getattr(update.message.from_user, 'id', None)
+    
+    if user_id is None:
+        await update.message.reply_text("❌ Foydalanuvchi ma'lumotlari topilmadi.")
+        return ConversationHandler.END
+    
     currency = get_currency_code(text)
     
     try:
-        # Save currency to DB, but preserve other columns (like onboarding_done)
+        # Save currency to DB
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
-        c.execute("""
-            INSERT INTO user_settings (user_id, currency)
-            VALUES (?, ?)
-            ON CONFLICT(user_id) DO UPDATE SET currency = excluded.currency
-        """, (user_id, currency))
+        
+        # Check if user exists in user_settings
+        c.execute("SELECT user_id FROM user_settings WHERE user_id = ?", (user_id,))
+        exists = c.fetchone()
+        
+        if exists:
+            # Update existing user
+            c.execute("UPDATE user_settings SET currency = ? WHERE user_id = ?", (currency, user_id))
+        else:
+            # Insert new user
+            c.execute("INSERT INTO user_settings (user_id, currency, onboarding_done) VALUES (?, ?, 0)", (user_id, currency))
+        
         conn.commit()
         conn.close()
+        
         await update.message.reply_text(
             "2️⃣ Oylik taxminiy kirimingizni kiriting (masalan: 3 000 000):",
             reply_markup=ReplyKeyboardMarkup([["Bekor qilish"]], resize_keyboard=True, one_time_keyboard=True)

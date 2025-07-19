@@ -8,6 +8,13 @@ import os
 from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from telegram.error import TelegramError
+from dotenv import load_dotenv
+
+# Load environment variables (for local development)
+try:
+    load_dotenv()
+except Exception:
+    pass  # Railway'da environment variables avtomatik yuklanadi
 
 # Import all handlers and functions from modules
 from handlers.start import (

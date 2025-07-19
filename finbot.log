@@ -1,0 +1,6 @@
+2025-07-19 03:04:59.724 | INFO     | __main__:main:429 - FinBot AI ishga tushmoqda...
+2025-07-19 03:04:59.761 | INFO     | db:init_db:58 - Database initialized successfully
+2025-07-19 03:05:19.162 | INFO     | __main__:main:429 - FinBot AI ishga tushmoqda...
+2025-07-19 03:05:19.165 | INFO     | db:init_db:58 - Database initialized successfully
+2025-07-19 03:05:20.949 | ERROR    | __main__:setup_schedulers:424 - Failed to start scheduler: no running event loop
+2025-07-19 03:05:20.950 | INFO     | __main__:main:491 - Bot ishga tushdi!

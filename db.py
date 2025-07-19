@@ -4,10 +4,11 @@ Database helper functions for FinBot AI Telegram bot.
 """
 
 import sqlite3
+import os
 from datetime import datetime, timedelta
 from loguru import logger
 
-DB_PATH = "finbot.db"
+DB_PATH = os.getenv("DATABASE_URL", "finbot.db")
 
 def init_db():
     """Initialize database with all required tables"""
@@ -161,10 +162,14 @@ def set_onboarded(user_id):
 
 def get_currency_code(text):
     """Extract currency code from text"""
-    if "so'm" in text.lower() or "uz" in text.lower():
+    if text is None:
         return "so'm"
-    elif "dollar" in text.lower() or "$" in text or "usd" in text.lower():
+    
+    text_lower = text.lower()
+    if "so'm" in text_lower or "uz" in text_lower:
+        return "so'm"
+    elif "dollar" in text_lower or "$" in text or "usd" in text_lower():
         return "USD"
-    elif "euro" in text.lower() or "eur" in text.lower():
+    elif "euro" in text_lower or "eur" in text_lower():
         return "EUR"
     return "so'm" 
