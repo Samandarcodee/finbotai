@@ -146,14 +146,14 @@ async def handle_kirim_chiqim_menu(update, context):
         return await income_category_selected(update, context)
     if text == "💸 Chiqim qo'shish":
         return await expense_category_selected(update, context)
-    # Default: show menu again
+    # Faqat Bosh menyu tugmasi
     keyboard = [
         ["💵 Kirim qo'shish", "💸 Chiqim qo'shish"],
-        ["🔙 Orqaga", "🏠 Bosh menyu"]
+        ["🏠 Bosh menyu"]
     ]
     await update.message.reply_text(
         "Kirim yoki chiqim qo'shish uchun tanlang:",
-        reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True)
+        reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False)
     )
     return ConversationHandler.END
 
@@ -168,8 +168,19 @@ async def message_handler(update, context):
         case "💰 Kirim/Chiqim":
             return await handle_kirim_chiqim_menu(update, context)
         case "📊 Balans/Tahlil":
-            # Balans/tahlil funksiyasi (agar kerak bo'lsa)
-            pass
+            keyboard = [
+                ["📊 Balans", "📈 Tahlil"],
+                ["🏠 Bosh menyu"]
+            ]
+            await update.message.reply_text(
+                "Balans yoki tahlilni tanlang:",
+                reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False)
+            )
+            return
+        case "📊 Balans":
+            return await show_balance(update, user_id)
+        case "📈 Tahlil":
+            return await show_analysis(update, user_id)
         case "🤖 AI vositalar":
             return await show_ai_menu(update, user_id)
         case "⚙️ Sozlamalar/Yordam":

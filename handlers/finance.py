@@ -277,8 +277,13 @@ async def income_category_selected(update: Update, context: ContextTypes.DEFAULT
     }
     selected_category = income_category_map.get(text, "Boshqa daromad")
     context.user_data['selected_income_category'] = selected_category
+    keyboard = [
+        ["💵 Kirim qo'shish", "💸 Chiqim qo'shish"],
+        ["🏠 Bosh menyu"]
+    ]
     await update.message.reply_text(
-        f"✅ Kategoriya: {selected_category}\n\nKirim miqdorini kiriting (masalan: 1 000 000):"
+        f"✅ Kategoriya: {selected_category}\n\nKirim miqdorini kiriting (masalan: 1 000 000):",
+        reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False)
     )
     return INCOME_AMOUNT
 
@@ -365,8 +370,13 @@ async def expense_category_selected(update: Update, context: ContextTypes.DEFAUL
     }
     selected_category = expense_category_map.get(text, "Boshqa chiqim")
     context.user_data['selected_expense_category'] = selected_category
+    keyboard = [
+        ["💵 Kirim qo'shish", "💸 Chiqim qo'shish"],
+        ["🏠 Bosh menyu"]
+    ]
     await update.message.reply_text(
-        f"✅ Kategoriya: {selected_category}\n\nChiqim miqdorini kiriting (masalan: 250 000):"
+        f"✅ Kategoriya: {selected_category}\n\nChiqim miqdorini kiriting (masalan: 250 000):",
+        reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False)
     )
     return EXPENSE_AMOUNT
 

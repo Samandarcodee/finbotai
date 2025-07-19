@@ -41,7 +41,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             welcome_text = get_message("welcome", user_id, name=user_name)
             language_kb = build_reply_keyboard([
                 ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"]
-            ], resize=True, one_time=True)
+            ], resize=True, one_time=True, add_navigation=False)
             await update.message.reply_text(welcome_text, reply_markup=language_kb, parse_mode="HTML")
             return ONBOARDING_LANGUAGE
         # Agar onboardingdan o'tgan bo'lsa, asosiy menyu
@@ -112,7 +112,7 @@ async def onboarding_language(update: Update, context: ContextTypes.DEFAULT_TYPE
                 ["🇺🇿 So'm", "💵 Dollar", "💶 Euro"],
                 ["🇷🇺 Rubl", "🇰🇿 Tenge", "🇰🇬 Som"],
                 ["🇹🇷 Lira", "🇨🇳 Yuan", "🇯🇵 Yen"]
-            ], resize=True, one_time=True)
+            ], resize=True, one_time=True, add_navigation=False)
         )
         logger.info(f"Returning ONBOARDING_CURRENCY state: {ONBOARDING_CURRENCY}")
         return ONBOARDING_CURRENCY
@@ -173,7 +173,7 @@ async def onboarding_currency(update: Update, context: ContextTypes.DEFAULT_TYPE
             income_text,
             reply_markup=build_reply_keyboard([
                 [skip_option]
-            ], resize=True, one_time=True)
+            ], resize=True, one_time=True, add_navigation=False)
         )
         logger.info(f"Returning ONBOARDING_INCOME state: {ONBOARDING_INCOME}")
         return ONBOARDING_INCOME
