@@ -1,4 +1,5 @@
 import httpx
+from utils import get_user_language
 
 RAPIDAPI_URL = 'https://chatgpt-42.p.rapidapi.com/gpt4'
 RAPIDAPI_KEY = '2ac44aca25msh901b0ec27b93167p121bacjsnba9e2c3ca446'
@@ -12,8 +13,15 @@ HEADERS = {
 
 class ai_service:
     @staticmethod
-    async def get_financial_advice(user_data):
-        prompt = f"User data: {user_data}. Give financial advice in Uzbek."
+    async def get_financial_advice(user_data, user_id=None):
+        language = get_user_language(user_id) if user_id else 'uz'
+        lang_map = {'uz': "o'zbek tilida", 'ru': "на русском языке", 'en': "in English"}
+        prompt = (
+            f"Foydalanuvchi ma'lumotlari: {user_data}. "
+            "Moliyaviy holatni qisqacha tahlil qilib, 2-3 ta aniq va amaliy maslahat bering. "
+            "Tejash, xarajatlarni optimallashtirish va daromadni oshirishga e'tibor qarating. "
+            f"Javobingiz {lang_map.get(language, 'o\'zbek tilida')}, qisqa va motivatsion bo'lsin. Emojilar ishlating."
+        )
         data = {"messages": [{"role": "user", "content": prompt}]}
         async with httpx.AsyncClient() as client:
             try:
@@ -27,8 +35,15 @@ class ai_service:
                 return f"AI xizmatida xatolik: {e}"
 
     @staticmethod
-    async def analyze_spending_patterns(transactions):
-        prompt = f"Analyze these transactions and give a summary in Uzbek: {transactions}"
+    async def analyze_spending_patterns(transactions, user_id=None):
+        language = get_user_language(user_id) if user_id else 'uz'
+        lang_map = {'uz': "o'zbek tilida", 'ru': "на русском языке", 'en': "in English"}
+        prompt = (
+            f"Tranzaksiyalar: {transactions}. "
+            "Xarajatlar va daromadlar patternini tahlil qiling. "
+            "Keraksiz xarajatlarni aniqlang va 2-3 ta tejash usulini taklif qiling. "
+            f"Javobingiz {lang_map.get(language, 'o\'zbek tilida')}, qisqa, aniq va emojilar bilan bo'lsin."
+        )
         data = {"messages": [{"role": "user", "content": prompt}]}
         async with httpx.AsyncClient() as client:
             try:
@@ -46,12 +61,15 @@ class ai_service:
         return "Moliyaviy maslahat: Har doim xarajatlaringizni nazorat qiling va tejashga harakat qiling."
 
     @staticmethod
-    async def generate_budget_plan(user_data, transactions):
+    async def generate_budget_plan(user_data, transactions, user_id=None):
+        language = get_user_language(user_id) if user_id else 'uz'
+        lang_map = {'uz': "o'zbek tilida", 'ru': "на русском языке", 'en': "in English"}
         prompt = (
             f"Foydalanuvchi ma'lumotlari: {user_data}. "
             f"Tranzaksiyalar tarixi: {transactions}. "
-            "Foydalanuvchiga oylik daromad, xarajatlar va maqsadlar asosida optimal byudjet rejasini tuzib bering. "
-            "Reja qisqa, aniq va motivatsion bo'lsin. Til: o'zbek."
+            "Oylik daromad, xarajat va kategoriyalar asosida oddiy, amaliy va qisqa byudjet rejasini tuzing. "
+            "50/30/20 qoidasi, tejash va optimallashtirish bo'yicha 2-3 ta tavsiya bering. "
+            f"Javobingiz {lang_map.get(language, 'o\'zbek tilida')}, qisqa va motivatsion bo'lsin."
         )
         data = {"messages": [{"role": "user", "content": prompt}]}
         async with httpx.AsyncClient() as client:
@@ -66,11 +84,14 @@ class ai_service:
                 return f"AI xizmatida xatolik: {e}"
 
     @staticmethod
-    async def monitor_goal_progress(goal_data, transactions):
+    async def monitor_goal_progress(goal_data, transactions, user_id=None):
+        language = get_user_language(user_id) if user_id else 'uz'
+        lang_map = {'uz': "o'zbek tilida", 'ru': "на русском языке", 'en': "in English"}
         prompt = (
             f"Foydalanuvchi maqsadi: {goal_data}. "
             f"Tranzaksiyalar tarixi: {transactions}. "
-            "Foydalanuvchining maqsadga erishish progressini tahlil qiling va qisqa motivatsion yoki ogohlantiruvchi xabar bering. Til: o'zbek."
+            "Maqsadga erishish progressini tahlil qiling va 2 ta motivatsion maslahat bering. "
+            f"Javobingiz {lang_map.get(language, 'o\'zbek tilida')}, qisqa va aniq bo'lsin."
         )
         data = {"messages": [{"role": "user", "content": prompt}]}
         async with httpx.AsyncClient() as client:

@@ -91,7 +91,6 @@ async def show_balance(update: Update, user_id: int):
         # Add navigation buttons
         keyboard = [
             ["📈 Tahlil"],
-            ["💰 Kirim/Chiqim"],
             ["🏠 Bosh menyu"]
         ]
         if update.message:
@@ -192,7 +191,6 @@ async def show_analysis(update: Update, user_id: int):
         # Add navigation buttons
         keyboard = [
             ["📊 Balans"],
-            ["💰 Kirim/Chiqim"],
             ["🏠 Bosh menyu"]
         ]
         if update.message:

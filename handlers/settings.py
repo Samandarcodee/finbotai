@@ -317,46 +317,39 @@ async def create_backup(update: Update, user_id: int):
             await update.message.reply_text("❌ Zaxira nusxasi yaratishda xatolik.")
 
 async def language_selection_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle language selection"""
-    if not update.message or not update.message.text or not hasattr(update.message, 'from_user'):
+    if not update.message or not update.message.text:
         return ConversationHandler.END
-    
-    text = update.message.text
+    text = update.message.text.strip()
     user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
-    if user_id is None:
+    if not user_id:
         return ConversationHandler.END
-    
-    language_map = {
-        "🇺🇿 O'zbekcha": "uz",
-        "🇷🇺 Русский": "ru", 
-        "🇺🇸 English": "en",
-        "🇺🇿 Узбекский": "uz",
-        "🇷🇺 Russian": "ru",
-        "🇺🇸 English": "en"
-    }
-    
-    if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu", "🏠 Bosh menyu"]:
-        return await start(update, context)
-    elif text in language_map:
-        try:
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            c.execute("UPDATE user_settings SET language = ? WHERE user_id = ?", (language_map[text], user_id))
-            conn.commit()
-            conn.close()
-            await update.message.reply_text(MESSAGES["uz"]["language_changed"].format(language=text))
-            return await show_settings(update, user_id)
-        except sqlite3.Error as e:
-            logger.exception(f"Language update error: {e}")
-            await update.message.reply_text("❌ Til o'zgartirishda xatolik.")
-            return ConversationHandler.END
+    # Tilni aniqlash
+    if "O'zbek" in text or "🇺🇿" in text:
+        language = "uz"
+    elif "Русский" in text or "🇷🇺" in text:
+        language = "ru"
+    elif "English" in text or "🇺🇸" in text:
+        language = "en"
     else:
-        reply_markup = ReplyKeyboardMarkup([
-            ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"],
-            ["🔙 Orqaga"]
-        ], resize_keyboard=True, one_time_keyboard=True)
-        await update.message.reply_text(MESSAGES["uz"]["invalid_choice"], reply_markup=reply_markup)
-        return 10
+        language = "uz"
+    # DB ga saqlash
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("UPDATE user_settings SET language = ? WHERE user_id = ?", (language, user_id))
+        conn.commit()
+        conn.close()
+        # Yangi tilda xabar yuborish
+        from constants import MESSAGES
+        msg = MESSAGES[language]["language_changed"].format(language=text)
+        await update.message.reply_text(msg)
+        # Bosh menyuni yangi til bilan ko'rsatish
+        from handlers.start import show_main_menu
+        return await show_main_menu(update, context)
+    except Exception as e:
+        logger.exception(f"Language change error: {e}")
+        await update.message.reply_text("❌ Tilni o'zgartirishda xatolik.")
+        return ConversationHandler.END
 
 async def currency_selection_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle currency selection"""

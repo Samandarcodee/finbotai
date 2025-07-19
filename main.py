@@ -189,10 +189,22 @@ async def message_handler(update, context):
                 ["🏠 Bosh menyu"]
             ]
             await update.message.reply_text(
-                "AI vositalaridan birini tanlang:",
+                "Quyidagi AI funksiyalaridan birini tanlang:",
                 reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False)
             )
             return
+        case "🤖 AI Moliyaviy Maslahat":
+            return await show_ai_advice(update, user_id)
+        case "📊 AI Xarajatlar Tahlili":
+            return await show_ai_analysis(update, user_id)
+        case "💰 AI Byudjet Tavsiyasi":
+            return await show_budget_advice(update, user_id)
+        case "🏆 AI Maqsad Monitoring":
+            return await show_goal_monitoring(update, user_id)
+        case "💡 AI Tejash Maslahatlari":
+            return await show_savings_tips(update, user_id)
+        case "📈 AI Investitsiya Maslahati":
+            return await show_investment_advice(update, user_id)
         case "⚙️ Sozlamalar/Yordam":
             keyboard = [
                 ["💰 Valyutani o'zgartirish", "🌐 Tilni o'zgartirish"],
