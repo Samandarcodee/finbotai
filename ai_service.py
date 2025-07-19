@@ -20,7 +20,7 @@ class ai_service:
             f"Foydalanuvchi ma'lumotlari: {user_data}. "
             "Moliyaviy holatni qisqacha tahlil qilib, 2-3 ta aniq va amaliy maslahat bering. "
             "Tejash, xarajatlarni optimallashtirish va daromadni oshirishga e'tibor qarating. "
-            f'Javobingiz {lang_map.get(language, "o\'zbek tilida")}, qisqa va motivatsion bo\'lsin. Emojilar ishlating.'
+            f"Javobingiz {lang_map.get(language, 'o\'zbek tilida')}, qisqa va motivatsion bo'lsin. Emojilar ishlating."
         )
         data = {"messages": [{"role": "user", "content": prompt}]}
         async with httpx.AsyncClient() as client:
@@ -42,7 +42,7 @@ class ai_service:
             f"Tranzaksiyalar: {transactions}. "
             "Xarajatlar va daromadlar patternini tahlil qiling. "
             "Keraksiz xarajatlarni aniqlang va 2-3 ta tejash usulini taklif qiling. "
-            f'Javobingiz {lang_map.get(language, "o\'zbek tilida")}, qisqa, aniq va emojilar bilan bo\'lsin.'
+            f"Javobingiz {lang_map.get(language, 'o\'zbek tilida')}, qisqa, aniq va emojilar bilan bo'lsin."
         )
         data = {"messages": [{"role": "user", "content": prompt}]}
         async with httpx.AsyncClient() as client:
@@ -69,7 +69,7 @@ class ai_service:
             f"Tranzaksiyalar tarixi: {transactions}. "
             "Oylik daromad, xarajat va kategoriyalar asosida oddiy, amaliy va qisqa byudjet rejasini tuzing. "
             "50/30/20 qoidasi, tejash va optimallashtirish bo'yicha 2-3 ta tavsiya bering. "
-            f'Javobingiz {lang_map.get(language, "o\'zbek tilida")}, qisqa va motivatsion bo\'lsin.'
+            f"Javobingiz {lang_map.get(language, 'o\'zbek tilida')}, qisqa va motivatsion bo'lsin."
         )
         data = {"messages": [{"role": "user", "content": prompt}]}
         async with httpx.AsyncClient() as client:
@@ -91,7 +91,7 @@ class ai_service:
             f"Foydalanuvchi maqsadi: {goal_data}. "
             f"Tranzaksiyalar tarixi: {transactions}. "
             "Maqsadga erishish progressini tahlil qiling va 2 ta motivatsion maslahat bering. "
-            f'Javobingiz {lang_map.get(language, "o\'zbek tilida")}, qisqa va aniq bo\'lsin.'
+            f"Javobingiz {lang_map.get(language, 'o\'zbek tilida')}, qisqa va aniq bo'lsin."
         )
         data = {"messages": [{"role": "user", "content": prompt}]}
         async with httpx.AsyncClient() as client:
