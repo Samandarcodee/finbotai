@@ -97,12 +97,14 @@ async def show_settings(update: Update, user_id: int):
         language = settings.get('language', 'uz')
         notifications = settings.get('notifications', True)
         auto_reports = settings.get('auto_reports', False)
+        notif_status = "✅ Yoqilgan" if notifications else "❌ O'chirilgan"
+        auto_status = "✅ Yoqilgan" if auto_reports else "❌ O'chirilgan"
         text = (
             f"⚙️ <b>SOZLAMALAR</b>\n\n"
             f"💰 Valyuta: {currency}\n"
             f"🌐 Til: {language}\n"
-            f"🔔 Bildirishnomalar: {'✅ Yoqilgan' if notifications else '❌ O\'chirilgan'}\n"
-            f"📊 Avtomatik hisobotlar: {'✅ Yoqilgan' if auto_reports else '❌ O\'chirilgan'}\n\n"
+            f"🔔 Bildirishnomalar: {notif_status}\n"
+            f"📊 Avtomatik hisobotlar: {auto_status}\n\n"
             "Sozlamalarni o'zgartirish uchun tugmalardan birini bosing:"
         )
         keyboard = [
