@@ -254,10 +254,22 @@ async def message_handler(update, context):
             ], resize_keyboard=True, one_time_keyboard=True)
         )
         return ConversationHandler.END
+    elif text == "📊 Balans":
+        from handlers.finance import show_balance
+        await show_balance(update, user_id)
+        return ConversationHandler.END
+    elif text == "📈 Tahlil":
+        from handlers.finance import show_analysis
+        await show_analysis(update, user_id)
+        return ConversationHandler.END
     elif text == "🤖 AI vositalar":
         return await show_ai_menu(update, user_id)
     elif text == "⚙️ Sozlamalar/Yordam":
         return await show_settings(update, user_id)
+    elif text == "🔙 Orqaga":
+        return await start(update, context)
+    elif text == "🏠 Bosh menyu":
+        return await start(update, context)
     else:
         await update.message.reply_text(get_message("invalid_choice", user_id))
         return ConversationHandler.END
@@ -487,6 +499,29 @@ def main():
         app.add_handler(ai_goal_conv_handler)
         app.add_handler(ai_budget_conv_handler)
         
+        # Add finance conversation handler
+        from handlers.finance import (
+            add_income, income_category_selected, income_amount, income_note,
+            expense_category_selected, expense_amount, expense_note, cancel
+        )
+        
+        finance_conv_handler = ConversationHandler(
+            entry_points=[
+                MessageHandler(filters.Regex("^💵 Kirim qo'shish$"), lambda u, c: income_category_selected(u, c)),
+                MessageHandler(filters.Regex("^💸 Chiqim qo'shish$"), lambda u, c: expense_category_selected(u, c))
+            ],
+            states={
+                INCOME_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, income_amount)],
+                INCOME_NOTE: [MessageHandler(filters.TEXT & ~filters.COMMAND, income_note)],
+                EXPENSE_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, expense_amount)],
+                EXPENSE_NOTE: [MessageHandler(filters.TEXT & ~filters.COMMAND, expense_note)],
+            },
+            fallbacks=[MessageHandler(filters.Regex("^(❌ Bekor qilish|🏠 Bosh menyu|/cancel)$"), cancel)]
+        )
+        app.add_handler(finance_conv_handler)
+        
+
+        
         # Add settings conversation handlers
         settings_conv_handler = ConversationHandler(
             entry_points=[MessageHandler(filters.Regex("^⚙️ Sozlamalar/Yordam$"), lambda u, c: show_settings(u, u.effective_user.id))],
@@ -515,7 +550,7 @@ def main():
         app.add_handler(CommandHandler("history", show_history))
         app.add_handler(CommandHandler("admin", admin_panel))
         
-        # Add message handlers
+        # Add message handlers - this should be last to catch unmatched messages
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
         app.add_handler(CallbackQueryHandler(inline_button_handler))
         
