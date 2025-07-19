@@ -269,27 +269,23 @@ async def complete_onboarding(update: Update, user_id: int, context: ContextType
     try:
         # Mark user as onboarded
         set_onboarded(user_id)
-        
         # Get completion message based on what was completed
         from utils import get_user_language
         from constants import MESSAGES
         language = get_user_language(user_id)
-        
-        income_completed = 'income' in context.user_data
-        goal_completed = 'goal' in context.user_data
-        
+        # Defensive: context.user_data may be None
+        user_data = context.user_data if context and hasattr(context, 'user_data') and context.user_data else {}
+        income_completed = 'income' in user_data
+        goal_completed = 'goal' in user_data
         if income_completed and goal_completed:
-            completion_text = MESSAGES.get(language, MESSAGES["uz"]).get("completion_full", "🎉 Onboarding yakunlandi!")
+            completion_text = MESSAGES.get(language, MESSAGES["uz"]).get("completion_full") or "🎉 Onboarding yakunlandi!"
         elif goal_completed:
-            completion_text = MESSAGES.get(language, MESSAGES["uz"]).get("completion_partial", "🎉 Onboarding yakunlandi!")
+            completion_text = MESSAGES.get(language, MESSAGES["uz"]).get("completion_partial") or "🎉 Onboarding yakunlandi!"
         else:
-            completion_text = MESSAGES.get(language, MESSAGES["uz"]).get("completion_minimal", "🎉 Onboarding yakunlandi!")
-        
-        await update.message.reply_text(completion_text)
-        
-        # Show main menu
-        await show_main_menu(update)
-        
+            completion_text = MESSAGES.get(language, MESSAGES["uz"]).get("completion_minimal") or "🎉 Onboarding yakunlandi!"
+        await update.message.reply_text(completion_text or "🎉 Onboarding yakunlandi!")
+        from main import navigate_to_main_menu
+        return await navigate_to_main_menu(update, context)
     except Exception as e:
         logger.exception(f"Error completing onboarding: {e}")
         await update.message.reply_text("❌ Onboarding yakunlashda xatolik.")
