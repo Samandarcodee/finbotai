@@ -327,6 +327,7 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
     user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     if not user_id:
         return ConversationHandler.END
+    
     # Tilni aniqlash
     if "O'zbek" in text or "🇺🇿" in text:
         language = "uz"
@@ -335,7 +336,17 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
     elif "English" in text or "🇺🇸" in text:
         language = "en"
     else:
-        language = "uz"
+        # Show language options again with better error message
+        reply_markup = build_reply_keyboard([
+            ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"],
+            ["🔙 Orqaga", "🏠 Bosh menyu"]
+        ], resize=True, one_time=True)
+        await update.message.reply_text(
+            "❌ Noto'g'ri tanlov. Faqat tilni tanlang:",
+            reply_markup=reply_markup
+        )
+        return SETTINGS_LANGUAGE
+    
     # DB ga saqlash
     try:
         conn = get_db_connection()
@@ -402,12 +413,18 @@ async def currency_selection_handler(update: Update, context: ContextTypes.DEFAU
             await update.message.reply_text("❌ Valyuta o'zgartirishda xatolik.")
             return ConversationHandler.END
     else:
-        reply_markup = ReplyKeyboardMarkup(
-            [[c] for c in MESSAGES["uz"]["currencies"]] + [[MESSAGES["uz"]["main_menu"]]],
-            resize_keyboard=True, one_time_keyboard=True
+        # Show currency options again with better error message
+        reply_markup = build_reply_keyboard([
+            ["🇺🇿 So'm", "💵 Dollar", "💶 Euro"],
+            ["🇷🇺 Rubl", "🇰🇿 Tenge", "🇰🇬 Som"],
+            ["🇹🇷 Lira", "🇨🇳 Yuan", "🇯🇵 Yen"],
+            ["🔙 Orqaga", "🏠 Bosh menyu"]
+        ], resize=True, one_time=True)
+        await update.message.reply_text(
+            "❌ Noto'g'ri tanlov. Faqat valyutani tanlang:",
+            reply_markup=reply_markup
         )
-        await update.message.reply_text(MESSAGES["uz"]["invalid_choice"], reply_markup=reply_markup)
-        return 9
+        return SETTINGS_CURRENCY
 
 async def delete_data_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle data deletion confirmation"""
@@ -442,5 +459,12 @@ async def delete_data_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("❌ Ma'lumotlarni o'chirish bekor qilindi.")
         return await show_settings(update, context)
     else:
-        await update.message.reply_text(MESSAGES["uz"]["invalid_choice"])
-        return 7 
+        # Show deletion confirmation options again with better error message
+        await update.message.reply_text(
+            "❌ Noto'g'ri tanlov. Faqat quyidagilardan birini tanlang:",
+            reply_markup=build_reply_keyboard([
+                ["✅ Ha, o'chir"],
+                ["❌ Yo'q, bekor qil"]
+            ], resize=True, one_time=True)
+        )
+        return SETTINGS_DELETE 
