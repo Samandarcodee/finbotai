@@ -15,6 +15,11 @@ from datetime import datetime
 # Import start function from start handler
 from handlers.start import start
 
+# Define constants locally to avoid circular import
+SETTINGS_CURRENCY = 9
+SETTINGS_LANGUAGE = 10
+SETTINGS_DELETE = 7
+
 # MESSAGES constant
 MESSAGES = {
     "uz": {
@@ -125,6 +130,7 @@ async def show_settings(update: Update, user_id: int):
                 reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
                 parse_mode=ParseMode.HTML
             )
+            return 5  # Return the main settings menu state
     except Exception as e:
         logger.exception(f"Settings error: {e}")
         if update.message:
@@ -148,14 +154,14 @@ async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ["🔙 Orqaga"]
         ], resize_keyboard=True, one_time_keyboard=True)
         await update.message.reply_text(MESSAGES["uz"]["choose_currency"], reply_markup=reply_markup)
-        return 9
+        return SETTINGS_CURRENCY
     elif text in ["🌐 Tilni o'zgartirish", "🌐 Изменить язык", "🌐 Change language"]:
         reply_markup = ReplyKeyboardMarkup([
             ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"],
             ["🔙 Orqaga"]
         ], resize_keyboard=True, one_time_keyboard=True)
         await update.message.reply_text(MESSAGES["uz"]["choose_language"], reply_markup=reply_markup)
-        return 10
+        return SETTINGS_LANGUAGE
     elif text in ["🔔 Bildirishnomalar", "🔔 Уведомления", "🔔 Notifications"]:
         if user_id:
             await toggle_notifications(update, user_id)
@@ -180,10 +186,10 @@ async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ["❌ Yo'q, bekor qil"]
             ], resize_keyboard=True, one_time_keyboard=True)
         )
-        return 7
+        return SETTINGS_DELETE
     else:
         await update.message.reply_text(MESSAGES["uz"]["invalid_choice"])
-        return 5
+        return 5  # Return to main settings menu state
 
 async def toggle_notifications(update: Update, user_id: int):
     """Toggle notifications setting"""

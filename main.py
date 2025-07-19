@@ -38,7 +38,8 @@ from handlers.push import (
 )
 from handlers.settings import (
     show_settings, settings_handler, currency_selection_handler, 
-    language_selection_handler, delete_data_handler
+    language_selection_handler, delete_data_handler,
+    SETTINGS_CURRENCY, SETTINGS_LANGUAGE, SETTINGS_DELETE
 )
 from handlers.goals import (
     ai_goal_start, ai_goal_name, ai_goal_amount, ai_goal_deadline,
@@ -64,9 +65,6 @@ logger.add("finbot.log", rotation="1 day", retention="7 days", level="INFO")
 ASK_SUPPORT = 100
 INCOME_AMOUNT, INCOME_NOTE = 101, 102
 EXPENSE_AMOUNT, EXPENSE_NOTE = 201, 202
-SETTINGS_CURRENCY = 9
-SETTINGS_LANGUAGE = 10
-SETTINGS_DELETE = 7
 
 # Import utils for shared functions
 from utils import get_user_language, get_user_currency, format_amount
@@ -493,6 +491,7 @@ def main():
         settings_conv_handler = ConversationHandler(
             entry_points=[MessageHandler(filters.Regex("^⚙️ Sozlamalar/Yordam$"), lambda u, c: show_settings(u, u.effective_user.id))],
             states={
+                5: [MessageHandler(filters.TEXT & ~filters.COMMAND, settings_handler)],  # Main settings menu state
                 SETTINGS_CURRENCY: [MessageHandler(filters.TEXT & ~filters.COMMAND, currency_selection_handler)],
                 SETTINGS_LANGUAGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, language_selection_handler)],
                 SETTINGS_DELETE: [MessageHandler(filters.TEXT & ~filters.COMMAND, delete_data_handler)],
