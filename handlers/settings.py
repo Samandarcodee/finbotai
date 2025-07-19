@@ -99,12 +99,15 @@ async def show_settings(update: Update, user_id: int):
         }
         currency_display = currency_names.get(currency, "🇺🇿 So'm")
         
+        notifications_status = "✅ Yoqilgan" if notifications else "❌ O'chirilgan"
+        reports_status = "✅ Yoqilgan" if auto_reports else "❌ O'chirilgan"
+        
         text = (
             "⚙️ <b>SOZLAMALAR</b>\n\n"
             f"💰 <b>Valyuta:</b> {currency_display}\n"
             f"🌐 <b>Til:</b> {lang_display}\n"
-            f"🔔 <b>Bildirishnomalar:</b> {'✅ Yoqilgan' if notifications else '❌ O\'chirilgan'}\n"
-            f"📊 <b>Avtomatik hisobotlar:</b> {'✅ Yoqilgan' if auto_reports else '❌ O\'chirilgan'}\n\n"
+            f"🔔 <b>Bildirishnomalar:</b> {notifications_status}\n"
+            f"📊 <b>Avtomatik hisobotlar:</b> {reports_status}\n\n"
             "Sozlamalarni o'zgartirish uchun tugmalardan birini bosing:"
         )
         
