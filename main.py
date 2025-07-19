@@ -181,9 +181,17 @@ async def message_handler(update, context):
             )
             return
         case "📊 Balans":
-            return await show_balance(update, context)
+            user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+            if user_id is None:
+                await update.message.reply_text("❌ Foydalanuvchi aniqlanmadi.")
+                return ConversationHandler.END
+            return await show_balance(update, user_id)
         case "📈 Tahlil":
-            return await show_analysis(update, context)
+            user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+            if user_id is None:
+                await update.message.reply_text("❌ Foydalanuvchi aniqlanmadi.")
+                return ConversationHandler.END
+            return await show_analysis(update, user_id)
         case "🤖 AI vositalar":
             return await show_ai_menu(update, context)
         case "⚙️ Sozlamalar/Yordam":
