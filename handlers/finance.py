@@ -265,7 +265,7 @@ async def income_category_selected(update: Update, context: ContextTypes.DEFAULT
     user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     if user_id is None:
         return ConversationHandler.END
-    if text == "🔙 Orqaga" or text == "❌ Bekor qilish" or text == "🏠 Bosh menyu":
+    if text in ["🔙 Orqaga", "❌ Bekor qilish", "🏠 Bosh menyu", "/start", "/cancel"]:
         return await cancel(update, context)
     
     income_category_map = {
@@ -287,6 +287,8 @@ async def income_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return ConversationHandler.END
     text = update.message.text.strip()
+    if text in ["🔙 Orqaga", "❌ Bekor qilish", "🏠 Bosh menyu", "/start", "/cancel"]:
+        return await cancel(update, context)
     amount, error = validate_amount(text)
     if error:
         await update.message.reply_text(f"❌ {error}\n\nQaytadan kiriting yoki 'Bekor qilish' tugmasini bosing.")
@@ -302,12 +304,12 @@ async def income_note(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return ConversationHandler.END
     text = update.message.text.strip()
-    if text.lower() in ["orqaga"]:
+    if text in ["🔙 Orqaga"]:
         await update.message.reply_text(
             "Kirim miqdorini kiriting (masalan: 500000):"
         )
         return INCOME_AMOUNT
-    if text.lower() in ["bekor qilish", "/cancel", "cancel"]:
+    if text in ["❌ Bekor qilish", "/cancel", "cancel", "🏠 Bosh menyu", "/start"]:
         return await cancel(update, context)
     
     note = text if text else "Kirim"
@@ -347,7 +349,7 @@ async def expense_category_selected(update: Update, context: ContextTypes.DEFAUL
     user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     if user_id is None:
         return ConversationHandler.END
-    if text == "🔙 Orqaga" or text == "❌ Bekor qilish" or text == "🏠 Bosh menyu":
+    if text in ["🔙 Orqaga", "❌ Bekor qilish", "🏠 Bosh menyu", "/start", "/cancel"]:
         return await cancel(update, context)
     
     expense_category_map = {
@@ -373,6 +375,8 @@ async def expense_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return ConversationHandler.END
     text = update.message.text.strip()
+    if text in ["🔙 Orqaga", "❌ Bekor qilish", "🏠 Bosh menyu", "/start", "/cancel"]:
+        return await cancel(update, context)
     amount, error = validate_amount(text)
     if error:
         await update.message.reply_text(f"❌ {error}\n\nQaytadan kiriting yoki 'Bekor qilish' tugmasini bosing.")
@@ -388,12 +392,12 @@ async def expense_note(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return ConversationHandler.END
     text = update.message.text.strip()
-    if text.lower() in ["orqaga"]:
+    if text in ["🔙 Orqaga"]:
         await update.message.reply_text(
             "Chiqim miqdorini kiriting (masalan: 250000):"
         )
         return EXPENSE_AMOUNT
-    if text.lower() in ["bekor qilish", "/cancel", "cancel"]:
+    if text in ["❌ Bekor qilish", "/cancel", "cancel", "🏠 Bosh menyu", "/start"]:
         return await cancel(update, context)
     
     note = text if text else "Chiqim"
