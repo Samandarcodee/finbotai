@@ -265,9 +265,10 @@ async def message_handler(update, context):
         return ConversationHandler.END
     # MODUL ichidan orqaga
     elif text == "🔙 Orqaga":
+        keyboard = get_keyboard(user_id)
         await update.message.reply_text(
             "Asosiy modullar menyusi:",
-            reply_markup=ReplyKeyboardMarkup(MAIN_MODULES_KEYBOARD, resize_keyboard=True)
+            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         )
         return ConversationHandler.END
     # Kirim/Chiqim tugmalari
@@ -304,7 +305,8 @@ async def message_handler(update, context):
         return await help_command(update, context)
     # Default
     else:
-        await update.message.reply_text(MESSAGES["uz"]["invalid_choice"], reply_markup=ReplyKeyboardMarkup(MAIN_MODULES_KEYBOARD, resize_keyboard=True))
+        keyboard = get_keyboard(user_id)
+        await update.message.reply_text(MESSAGES["uz"]["invalid_choice"], reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
         return ConversationHandler.END
 
 async def inline_button_handler(update, context):
@@ -372,7 +374,7 @@ async def show_history(update, context):
             return
     
     try:
-        from db import get_db_connection, format_currency
+        from db import get_db_connection
         conn = get_db_connection()
         if conn is None:
             await update.message.reply_text("❌ Ma'lumotlar bazasiga ulanishda xatolik.")
@@ -402,7 +404,7 @@ async def show_history(update, context):
             "📜 <b>Harakatlar tarixi</b>\n\n"
             f"👤 <b>Botga kirgan sana:</b> {joined_at_str}\n"
             f"📊 <b>Qo'shgan kirim/chiqimlar soni:</b> {total_ops} ta\n"
-            f"💰 <b>Tejalgan umumiy miqdor:</b> {format_currency(saved)}\n"
+            f"💰 <b>Tejalgan umumiy miqdor:</b> {format_amount(saved, user_id)}\n"
         )
         await update.message.reply_text(text, parse_mode="HTML")
         
@@ -507,6 +509,9 @@ def main():
     init_db()
     
     # Build application
+    if not BOT_TOKEN:
+        logger.error("BOT_TOKEN topilmadi!")
+        return
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_error_handler(global_error_handler)
 

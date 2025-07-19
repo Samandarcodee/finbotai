@@ -8,6 +8,7 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
 from telegram.constants import ParseMode
 from db import get_all_user_ids, is_onboarded, get_user_settings, get_weekly_stats, DB_PATH
+from utils import format_amount
 from ai_service import ai_service
 import asyncio
 from loguru import logger
@@ -146,9 +147,9 @@ async def send_weekly_push_to_all(context):
             await context.bot.send_message(
                 chat_id=user_id,
                 text=MESSAGES["uz"]["push_weekly"].format(
-                    income=f"{kirim:,}", 
-                    expense=f"{chiqim:,}", 
-                    saved=f"{tejagan:,}"
+                    income=format_amount(kirim, user_id), 
+                    expense=format_amount(chiqim, user_id), 
+                    saved=format_amount(tejagan, user_id)
                 ),
                 parse_mode=ParseMode.HTML
             )
@@ -215,6 +216,10 @@ async def send_monthly_feedback_push(context):
     """Scheduled monthly feedback push for all users"""
     await send_monthly_feedback_push_to_all(context)
 
+async def cancel_push(update, context):
+    """Cancel push operation"""
+    return ConversationHandler.END
+
 # PUSH CONV HANDLER
 push_conv_handler = ConversationHandler(
     entry_points=[CommandHandler("push", push_command)],
@@ -222,5 +227,5 @@ push_conv_handler = ConversationHandler(
         PUSH_TOPIC: [MessageHandler(filters.TEXT & ~filters.COMMAND, push_topic_handler)],
         PUSH_CONFIRM: [MessageHandler(filters.TEXT & ~filters.COMMAND, push_confirm_handler)],
     },
-    fallbacks=[CommandHandler("cancel", lambda u, c: ConversationHandler.END)]
+    fallbacks=[CommandHandler("cancel", cancel_push)]
 ) 

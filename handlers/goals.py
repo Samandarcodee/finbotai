@@ -8,6 +8,7 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
 from telegram.constants import ParseMode
 from db import get_db_connection, get_user_settings, DB_PATH
+from utils import format_amount
 from ai_service import ai_service
 from datetime import datetime
 from loguru import logger
@@ -70,8 +71,9 @@ async def ai_goal_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return AI_GOAL_AMOUNT
     
     context.user_data['goal_amount'] = amount
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     await update.message.reply_text(
-        f"✅ Miqdor: {amount:,} so'm\n\n"
+        f"✅ Miqdor: {format_amount(amount, user_id)}\n\n"
         "Maqsad muddatini kiriting (masalan: 2024-12-31 yoki 6 oy):",
         reply_markup=ReplyKeyboardMarkup([["❌ Bekor qilish"]], resize_keyboard=True, one_time_keyboard=True)
     )
@@ -94,10 +96,11 @@ async def ai_goal_deadline(update: Update, context: ContextTypes.DEFAULT_TYPE):
     goal_name = context.user_data.get('goal_name', '')
     goal_amount = context.user_data.get('goal_amount', 0)
     
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     await update.message.reply_text(
         f"🎯 <b>Maqsad ma'lumotlari:</b>\n\n"
         f"📝 Nomi: {goal_name}\n"
-        f"💰 Miqdor: {goal_amount:,} so'm\n"
+        f"💰 Miqdor: {format_amount(goal_amount, user_id)}\n"
         f"📅 Muddat: {deadline}\n\n"
         "Maqsadni saqlashni tasdiqlaysizmi?",
         reply_markup=ReplyKeyboardMarkup([
@@ -141,7 +144,7 @@ async def ai_goal_monitor(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 f"✅ <b>Maqsad saqlandi!</b>\n\n"
                 f"🎯 {goal_name}\n"
-                f"💰 {goal_amount:,} so'm\n"
+                f"💰 {format_amount(goal_amount, user_id)}\n"
                 f"📅 {goal_deadline}\n\n"
                 "Maqsadga erishish uchun har kuni kichik qadamlar tashlang!",
                 parse_mode=ParseMode.HTML
@@ -155,6 +158,10 @@ async def ai_goal_monitor(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("❌ Noto'g'ri tanlov.")
     return AI_GOAL_MONITOR
 
+async def cancel_goal(update, context):
+    """Cancel goal operation"""
+    return ConversationHandler.END
+
 # AI GOAL CONV HANDLER
 ai_goal_conv_handler = ConversationHandler(
     entry_points=[CommandHandler("ai_maqsad", ai_goal_start)],
@@ -164,5 +171,5 @@ ai_goal_conv_handler = ConversationHandler(
         AI_GOAL_DEADLINE: [MessageHandler(filters.TEXT & ~filters.COMMAND, ai_goal_deadline)],
         AI_GOAL_MONITOR: [MessageHandler(filters.TEXT & ~filters.COMMAND, ai_goal_monitor)],
     },
-    fallbacks=[CommandHandler("cancel", lambda u, c: ConversationHandler.END)]
+    fallbacks=[CommandHandler("cancel", cancel_goal)]
 ) 

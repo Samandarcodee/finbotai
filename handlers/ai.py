@@ -7,6 +7,7 @@ import asyncio
 from telegram import Update
 from telegram.constants import ParseMode
 from db import get_db_connection, get_user_settings, DB_PATH
+from utils import format_amount
 from ai_service import ai_service
 from loguru import logger
 import sqlite3

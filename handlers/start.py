@@ -231,7 +231,7 @@ async def onboarding_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Save income to context
     context.user_data['onboarding_income'] = income
     
-    goal_text = get_message("goal_input", user_id)
+    goal_text = MESSAGES.get(language, MESSAGES["uz"]).get("goal_input", "4️⃣ Maqsad qo'yish yoki o'tkazib yuboring:")
     await update.message.reply_text(
         goal_text,
         reply_markup=ReplyKeyboardMarkup([

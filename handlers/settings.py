@@ -108,13 +108,13 @@ async def currency_selection_handler(update: Update, context: ContextTypes.DEFAU
         return ConversationHandler.END
     
     currency_map = {
-        "🇺🇿 So'm": "so'm",
+        "🇺🇿 So'm": "UZS",
         "💵 Dollar": "USD",
         "💶 Euro": "EUR",
-        "🇺🇿 Сум": "so'm",
+        "🇺🇿 Сум": "UZS",
         "💵 Доллар": "USD",
         "💶 Евро": "EUR",
-        "🇺🇿 So'm": "so'm",
+        "🇺🇿 So'm": "UZS",
         "💵 Dollar": "USD",
         "💶 Euro": "EUR"
     }

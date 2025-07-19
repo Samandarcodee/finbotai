@@ -8,6 +8,7 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
 from telegram.constants import ParseMode
 from db import get_db_connection, get_user_settings, DB_PATH
+from utils import format_amount
 from ai_service import ai_service
 from datetime import datetime
 from loguru import logger
@@ -97,8 +98,9 @@ async def ai_budget_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         context.user_data['ai_budget_plan'] = ai_budget_plan
         
+        user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
         await update.message.reply_text(
-            f"✅ Oylik kirim: {income:,} so'm\n\n"
+            f"✅ Oylik kirim: {format_amount(income, user_id)}\n\n"
             f"🤖 <b>AI Byudjet rejasi:</b>\n\n{ai_budget_plan}\n\n"
             "Bu rejani saqlashni xohlaysizmi?",
             reply_markup=ReplyKeyboardMarkup([
@@ -163,7 +165,7 @@ async def ai_budget_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             await update.message.reply_text(
                 f"✅ <b>AI Byudjet saqlandi!</b>\n\n"
-                f"💰 Oylik kirim: {monthly_income:,} so'm\n"
+                f"💰 Oylik kirim: {format_amount(monthly_income, user_id)}\n"
                 f"📅 Oy: {current_month}\n\n"
                 "Byudjetni kuzatish uchun /budget buyrug'ini ishlating!",
                 parse_mode=ParseMode.HTML
@@ -178,6 +180,10 @@ async def ai_budget_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("❌ Noto'g'ri tanlov.")
     return AI_BUDGET_CONFIRM
 
+async def cancel_budget(update, context):
+    """Cancel budget operation"""
+    return ConversationHandler.END
+
 # AI BUDGET CONV HANDLER
 ai_budget_conv_handler = ConversationHandler(
     entry_points=[CommandHandler("ai_byudjet", ai_budget_start)],
@@ -185,5 +191,5 @@ ai_budget_conv_handler = ConversationHandler(
         AI_BUDGET_INCOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, ai_budget_income)],
         AI_BUDGET_CONFIRM: [MessageHandler(filters.TEXT & ~filters.COMMAND, ai_budget_confirm)],
     },
-    fallbacks=[CommandHandler("cancel", lambda u, c: ConversationHandler.END)]
+    fallbacks=[CommandHandler("cancel", cancel_budget)]
 ) 
