@@ -83,19 +83,24 @@ def validate_amount(text):
     except Exception:
         return None, "Noto'g'ri miqdor! Masalan: 5 000 000"
 
-def get_navigation_keyboard(extra_buttons=None):
-    """Return a keyboard with extra buttons and navigation buttons."""
-    base = ["🔙 Orqaga", "🏠 Bosh menyu"]
-    if extra_buttons:
-        return [extra_buttons] + [base]
-    return [base] 
+def get_navigation_keyboard():
+    """Return navigation buttons as a single row."""
+    return [["🔙 Orqaga", "🏠 Bosh menyu"]]
 
-def build_reply_keyboard(buttons, resize=True, one_time=False):
-    """Universal reply keyboard builder. Always adds navigation buttons at the bottom."""
+
+def build_reply_keyboard(buttons, resize=True, one_time=False, add_navigation=True):
+    """Universal reply keyboard builder. Navigation tugmalari faqat bir marta va to'g'ri formatda chiqadi."""
     from telegram import ReplyKeyboardMarkup
-    # Agar buttons list of lists bo'lsa, uni o'zgartirmaymiz
-    if buttons and isinstance(buttons[0], list):
-        keyboard = buttons + get_navigation_keyboard()
-    else:
-        keyboard = [buttons] + get_navigation_keyboard()
+    keyboard = []
+    # buttons ni to'g'ri formatga keltiramiz
+    if buttons:
+        if isinstance(buttons[0], list):
+            keyboard.extend(buttons)
+        else:
+            keyboard.append(buttons)
+    if add_navigation:
+        # Navigation tugmalari dublikat bo'lmasligi uchun tekshiramiz
+        nav = ["🔙 Orqaga", "🏠 Bosh menyu"]
+        if not any(set(nav) <= set(row) for row in keyboard):
+            keyboard += get_navigation_keyboard()
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=resize, one_time_keyboard=one_time) 
