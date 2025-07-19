@@ -230,11 +230,12 @@ async def show_push_menu(update: Update, user_id: int):
             
         notifications = settings.get('notifications', True)
         auto_reports = settings.get('auto_reports', False)
-        
+        notif_status = "✅ Yoqilgan" if notifications else "❌ O'chirilgan"
+        auto_status = "✅ Yoqilgan" if auto_reports else "❌ O'chirilgan"
         text = (
             "🔔 <b>BILDIRISHNOMALAR</b>\n\n"
-            f"🔔 Push bildirishnomalar: {'✅ Yoqilgan' if notifications else '❌ O\'chirilgan'}\n"
-            f"📊 Avtomatik hisobotlar: {'✅ Yoqilgan' if auto_reports else '❌ O\'chirilgan'}\n\n"
+            f"🔔 Push bildirishnomalar: {notif_status}\n"
+            f"📊 Avtomatik hisobotlar: {auto_status}\n\n"
             "Bildirishnomalarni sozlash uchun tugmalardan birini bosing:"
         )
         
