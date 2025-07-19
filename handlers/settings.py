@@ -352,6 +352,16 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
     # DB ga saqlash
     try:
         conn = get_db_connection()
+        if conn is None:
+            reply_markup = build_reply_keyboard([
+                ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"],
+                ["🔙 Orqaga", "🏠 Bosh menyu"]
+            ], resize=True, one_time=True)
+            await update.message.reply_text(
+                "❌ Baza bilan ulanishda xatolik. Keyinroq urinib ko'ring.",
+                reply_markup=reply_markup
+            )
+            return SETTINGS_LANGUAGE
         c = conn.cursor()
         c.execute("UPDATE user_settings SET language = ? WHERE user_id = ?", (language, user_id))
         conn.commit()
@@ -365,8 +375,15 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
         return await show_main_menu(update, context)
     except Exception as e:
         logger.exception(f"Language change error: {e}")
-        await update.message.reply_text("❌ Tilni o'zgartirishda xatolik.")
-        return ConversationHandler.END
+        reply_markup = build_reply_keyboard([
+            ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"],
+            ["🔙 Orqaga", "🏠 Bosh menyu"]
+        ], resize=True, one_time=True)
+        await update.message.reply_text(
+            "❌ Tilni o'zgartirishda xatolik. Qayta urinib ko'ring:",
+            reply_markup=reply_markup
+        )
+        return SETTINGS_LANGUAGE
 
 async def currency_selection_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle currency selection"""
