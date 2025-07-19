@@ -337,6 +337,13 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
     if not user_id:
         return ConversationHandler.END
     
+    # Handle navigation commands first
+    if text in ["🏠 Bosh menyu", "/start"]:
+        from handlers.start import show_main_menu
+        return await show_main_menu(update, context)
+    if text == "🔙 Orqaga":
+        return await show_settings(update, context)
+    
     # Tilni aniqlash
     if "O'zbek" in text or "🇺🇿" in text:
         language = "uz"
