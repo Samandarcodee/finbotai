@@ -408,12 +408,17 @@ async def global_error_handler(update, context):
 
 def setup_schedulers(app):
     """Setup scheduled tasks"""
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(lambda: send_daily_push(app), 'cron', hour=8, minute=0)
-    scheduler.add_job(lambda: send_weekly_push(app), 'cron', day_of_week='sun', hour=8, minute=0)
-    scheduler.add_job(lambda: send_monthly_goal_push(app), 'cron', day=1, hour=8, minute=0)
-    scheduler.add_job(lambda: send_monthly_feedback_push(app), 'cron', day=1, hour=12, minute=0)
-    scheduler.start()
+    try:
+        scheduler = AsyncIOScheduler()
+        scheduler.add_job(lambda: send_daily_push(app), 'cron', hour=8, minute=0)
+        scheduler.add_job(lambda: send_weekly_push(app), 'cron', day_of_week='sun', hour=8, minute=0)
+        scheduler.add_job(lambda: send_monthly_goal_push(app), 'cron', day=1, hour=8, minute=0)
+        scheduler.add_job(lambda: send_monthly_feedback_push(app), 'cron', day=1, hour=12, minute=0)
+        scheduler.start()
+        logger.info("Scheduler started successfully")
+    except Exception as e:
+        logger.error(f"Failed to start scheduler: {e}")
+        # Continue without scheduler if it fails
 
 def main():
     """Main function to start the bot"""
