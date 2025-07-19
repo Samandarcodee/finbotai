@@ -75,6 +75,7 @@ async def show_ai_menu(update: Update, user_id: int):
                 reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
                 parse_mode=ParseMode.HTML
             )
+            return 100  # Return AI menu state
     except Exception as e:
         logger.exception(f"AI menu error: {e}")
 
@@ -548,5 +549,6 @@ async def handle_ai_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await start(update, context)
     else:
         await update.message.reply_text("❌ Noto'g'ri tanlov. Qaytadan tanlang.")
+        return 100  # Return to AI menu state
     
-    return ConversationHandler.END 
+    return 100  # Return to AI menu state for other selections 

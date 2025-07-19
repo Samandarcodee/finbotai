@@ -36,7 +36,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Check if user is new (onboarding needed)
         if not is_onboarded(user_id):
             # Onboarding: til tanlash bilan boshlanadi
-            from main import get_message
+            from constants import get_message
             welcome_text = get_message("welcome", user_id, name=user_name)
             language_kb = ReplyKeyboardMarkup([
                 ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"]
@@ -47,7 +47,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await show_main_menu(update)
     except Exception as e:
         logger.exception(f"Error in start: {e}")
-        from main import get_message
+        from constants import get_message
         await update.message.reply_text(get_message("error_general", user_id))
         return ConversationHandler.END
 
@@ -103,7 +103,7 @@ async def onboarding_language(update: Update, context: ContextTypes.DEFAULT_TYPE
         context.user_data['language'] = language
         
         logger.info(f"Sending currency selection message to user {user_id}")
-        from main import get_message
+        from constants import get_message
         currency_text = get_message("currency_select", user_id)
         await update.message.reply_text(
             currency_text,
@@ -164,7 +164,7 @@ async def onboarding_currency(update: Update, context: ContextTypes.DEFAULT_TYPE
         
         logger.info(f"Sending optional income step message to user {user_id}")
         from utils import get_user_language
-        from main import MESSAGES
+        from constants import MESSAGES
         language = get_user_language(user_id)
         income_text = MESSAGES.get(language, MESSAGES["uz"]).get("income_input", "3️⃣ Oylik taxminiy daromadingizni kiriting yoki o'tkazib yuboring:")
         skip_option = MESSAGES.get(language, MESSAGES["uz"]).get("skip_option", "⏭ O'tkazib yuborish")
@@ -195,7 +195,7 @@ async def onboarding_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Check if user wants to skip
     from utils import get_user_language
-    from main import MESSAGES
+    from constants import MESSAGES
     language = get_user_language(user_id)
     skip_text = MESSAGES.get(language, MESSAGES["uz"]).get("skip_option", "⏭ O'tkazib yuborish")
     
@@ -246,7 +246,7 @@ async def onboarding_goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Check if user wants to skip
     from utils import get_user_language
-    from main import MESSAGES
+    from constants import MESSAGES
     language = get_user_language(user_id)
     skip_text = MESSAGES.get(language, MESSAGES["uz"]).get("skip_option", "⏭ O'tkazib yuborish")
     
@@ -271,7 +271,7 @@ async def complete_onboarding(update: Update, user_id: int, context: ContextType
         
         # Get completion message based on what was completed
         from utils import get_user_language
-        from main import MESSAGES
+        from constants import MESSAGES
         language = get_user_language(user_id)
         
         income_completed = 'income' in context.user_data
@@ -302,7 +302,8 @@ async def show_main_menu(update):
     if user_id is None:
         return
     
-    from main import get_keyboard
+    # Get keyboard in user's language
+    from constants import get_keyboard
     keyboard = get_keyboard(user_id)
     
     await update.message.reply_text(

@@ -187,6 +187,8 @@ async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ], resize_keyboard=True, one_time_keyboard=True)
         )
         return SETTINGS_DELETE
+    elif text == "🔙 Orqaga":
+        return await start(update, context)
     else:
         await update.message.reply_text(MESSAGES["uz"]["invalid_choice"])
         return 5  # Return to main settings menu state
