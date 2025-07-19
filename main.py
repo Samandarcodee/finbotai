@@ -71,7 +71,7 @@ from constants import (
 )
 
 # Import utils for shared functions
-from utils import get_user_language, get_user_currency, format_amount
+from utils import get_user_language, get_user_currency, format_amount, build_reply_keyboard
 
 async def help_command(update, context):
     """Help command handler"""
@@ -134,6 +134,29 @@ async def admin_reply(update, context):
             if update.message is not None:
                 await update.message.reply_text(f"Xatolik: {e}")
 
+async def handle_kirim_chiqim_menu(update, context):
+    """Kirim/Chiqim menyusi uchun universal handler"""
+    if not update.message or not hasattr(update.message, 'from_user'):
+        return ConversationHandler.END
+    text = update.message.text
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+    if text in ["🔙 Orqaga", "🏠 Bosh menyu", "/start"]:
+        return await start(update, context)
+    if text == "💵 Kirim qo'shish":
+        return await income_category_selected(update, context)
+    if text == "💸 Chiqim qo'shish":
+        return await expense_category_selected(update, context)
+    # Default: show menu again
+    keyboard = [
+        ["💵 Kirim qo'shish", "💸 Chiqim qo'shish"],
+        ["🔙 Orqaga", "🏠 Bosh menyu"]
+    ]
+    await update.message.reply_text(
+        "Kirim yoki chiqim qo'shish uchun tanlang:",
+        reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True)
+    )
+    return ConversationHandler.END
+
 async def message_handler(update, context):
     """Main message handler with enhanced AI and settings support"""
     if not update.message or not update.message.text or not hasattr(update.message, 'from_user'):
@@ -150,14 +173,7 @@ async def message_handler(update, context):
 
     # Handle main menu options
     if text == "💰 Kirim/Chiqim":
-        await update.message.reply_text(
-            "Kirim yoki chiqim qo'shish uchun tanlang:",
-            reply_markup=ReplyKeyboardMarkup([
-                ["💵 Kirim qo'shish", "💸 Chiqim qo'shish"],
-                ["🔙 Orqaga", "🏠 Bosh menyu"]
-            ], resize_keyboard=True, one_time_keyboard=True)
-        )
-        return ConversationHandler.END
+        return await handle_kirim_chiqim_menu(update, context)
     elif text == "📊 Balans/Tahlil":
         await update.message.reply_text(
             "Balans yoki tahlilni tanlang:",
