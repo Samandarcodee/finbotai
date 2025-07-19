@@ -7,8 +7,8 @@ import sqlite3
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
 from telegram.constants import ParseMode
-from datetime import datetime
-from db import init_db, get_db_connection, get_user_settings, get_currency_code, set_onboarded, DB_PATH
+from datetime import datetime, timedelta
+from db import init_db, get_db_connection, get_user_settings, get_currency_code, set_onboarded, is_onboarded, DB_PATH
 from loguru import logger
 
 ONBOARDING_LANGUAGE, ONBOARDING_CURRENCY, ONBOARDING_INCOME, ONBOARDING_GOAL = 300, 301, 302, 303
@@ -34,13 +34,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     try:
         # Check if user is new (onboarding needed)
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute("SELECT onboarding_done FROM user_settings WHERE user_id = ?", (user_id,))
-        row = c.fetchone()
-        conn.close()
-        
-        if row is None or not isinstance(row, (list, tuple)) or not row[0]:
+        if not is_onboarded(user_id):
             # Onboarding: til tanlash bilan boshlanadi
             from main import get_message
             welcome_text = get_message("welcome", user_id, name=user_name)
@@ -51,8 +45,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return ONBOARDING_LANGUAGE
         # Agar onboardingdan o'tgan bo'lsa, asosiy menyu
         return await show_main_menu(update)
-    except sqlite3.Error as e:
-        logger.exception(f"Database error in start: {e}")
+    except Exception as e:
+        logger.exception(f"Error in start: {e}")
         from main import get_message
         await update.message.reply_text(get_message("error_general", user_id))
         return ConversationHandler.END
@@ -203,157 +197,129 @@ async def onboarding_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from utils import get_user_language
     from main import MESSAGES
     language = get_user_language(user_id)
-    skip_option = MESSAGES.get(language, MESSAGES["uz"]).get("skip_option", "⏭ O'tkazib yuborish")
+    skip_text = MESSAGES.get(language, MESSAGES["uz"]).get("skip_option", "⏭ O'tkazib yuborish")
     
-    if text == skip_option:
+    if text == skip_text:
+        # Skip income step, go to goal
+        logger.info(f"User {user_id} skipped income step")
         goal_text = MESSAGES.get(language, MESSAGES["uz"]).get("goal_input", "4️⃣ Maqsad qo'yish yoki o'tkazib yuboring:")
         await update.message.reply_text(
             goal_text,
             reply_markup=ReplyKeyboardMarkup([
-                [skip_option]
+                [skip_text]
             ], resize_keyboard=True, one_time_keyboard=True)
         )
         return ONBOARDING_GOAL
     
-    # Process income input
-    try:
-        income = int(text.replace(' ', ''))
-        if income <= 0:
-            raise ValueError
-    except ValueError:
-        error_text = MESSAGES.get(language, MESSAGES["uz"]).get("error_format", "❌ Noto'g'ri format! Masalan: 3 000 000 yoki 5000000.")
-        await update.message.reply_text(
-            error_text,
-            reply_markup=ReplyKeyboardMarkup([
-                [skip_option]
-            ], resize_keyboard=True, one_time_keyboard=True)
-        )
+    # Validate income amount
+    from db import validate_amount
+    amount, error = validate_amount(text)
+    
+    if error:
+        await update.message.reply_text(error)
         return ONBOARDING_INCOME
     
-    # Save income to context
-    context.user_data['onboarding_income'] = income
+    # Save income to context (optional step)
+    context.user_data['income'] = amount
     
+    # Go to goal step
     goal_text = MESSAGES.get(language, MESSAGES["uz"]).get("goal_input", "4️⃣ Maqsad qo'yish yoki o'tkazib yuboring:")
     await update.message.reply_text(
         goal_text,
         reply_markup=ReplyKeyboardMarkup([
-            [skip_option]
+            [skip_text]
         ], resize_keyboard=True, one_time_keyboard=True)
     )
     return ONBOARDING_GOAL
 
 async def onboarding_goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle goal input during onboarding"""
-    if not update.message or not update.message.text or not hasattr(update.message, 'from_user') or update.message.from_user is None:
+    if not update.message or not update.message.text:
         return ConversationHandler.END
     
-    text = update.message.text.strip()
+    text = update.message.text
     user_id = getattr(update.message.from_user, 'id', None)
+    
     if user_id is None:
+        await update.message.reply_text("❌ Foydalanuvchi ma'lumotlari topilmadi.")
         return ConversationHandler.END
     
     # Check if user wants to skip
     from utils import get_user_language
     from main import MESSAGES
     language = get_user_language(user_id)
-    skip_option = MESSAGES.get(language, MESSAGES["uz"]).get("skip_option", "⏭ O'tkazib yuborish")
+    skip_text = MESSAGES.get(language, MESSAGES["uz"]).get("skip_option", "⏭ O'tkazib yuborish")
     
-    if text == skip_option:
-        # Mark onboarding as done without goal
-        try:
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            c.execute("UPDATE user_settings SET onboarding_done = 1 WHERE user_id = ?", (user_id,))
-            conn.commit()
-            conn.close()
-            
-            completion_text = MESSAGES.get(language, MESSAGES["uz"]).get("completion_minimal", "🎉 Onboarding yakunlandi!")
-            await update.message.reply_text(completion_text, reply_markup=ReplyKeyboardRemove())
-            return await show_main_menu(update)
-        except sqlite3.Error as e:
-            logger.exception(f"Database error in onboarding_goal: {e}")
-            await update.message.reply_text(MESSAGES.get(language, MESSAGES["uz"]).get("error_general", "❌ Xatolik yuz berdi. Qaytadan urinib ko'ring."))
-            return ConversationHandler.END
-    
-    # Process goal input
-    user_data = getattr(context, 'user_data', {})
-    if not isinstance(user_data, dict):
-        user_data = {}
-    income = user_data.get('onboarding_income', 0)
-    
-    try:
-        # Save goal to DB (goals table) and mark onboarding as done
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        
-        # Save goal if provided
-        if text and text != "⏭ O'tkazib yuborish":
-            c.execute("INSERT INTO goals (user_id, goal_name, target_amount, deadline) VALUES (?, ?, ?, ?)",
-                      (user_id, text, income, None))
-        
-        # Mark onboarding as done
-        c.execute("UPDATE user_settings SET onboarding_done = 1 WHERE user_id = ?", (user_id,))
-        conn.commit()
-        conn.close()
-        
-        # Show completion message based on what was completed
-        if income > 0:
-            completion_text = (
-                "🎉 Onboarding yakunlandi!\n\n"
-                "✅ Til va valyuta sozlandi\n"
-                "✅ Daromad kiritildi\n"
-                "✅ Maqsad qo'yildi\n\n"
-                "🤖 AI byudjet tavsiyalari mavjud!\n"
-                "🏠 Asosiy menyudan foydalanishingiz mumkin!"
-            )
-        else:
-            completion_text = (
-                "🎉 Onboarding yakunlandi!\n\n"
-                "✅ Til va valyuta sozlandi\n"
-                "✅ Maqsad qo'yildi\n\n"
-                "🏠 Asosiy menyudan foydalanishingiz mumkin!"
-            )
-        
-        await update.message.reply_text(completion_text, reply_markup=ReplyKeyboardRemove())
-        return await show_main_menu(update)
-    except sqlite3.Error as e:
-        logger.exception(f"Database error in onboarding_goal: {e}")
-        await update.message.reply_text("❌ Xatolik yuz berdi. Qaytadan urinib ko'ring.")
+    if text == skip_text:
+        # Skip goal step, complete onboarding
+        logger.info(f"User {user_id} skipped goal step")
+        await complete_onboarding(update, user_id, context)
         return ConversationHandler.END
+    
+    # Save goal to context (optional step)
+    context.user_data['goal'] = text
+    
+    # Complete onboarding
+    await complete_onboarding(update, user_id, context)
+    return ConversationHandler.END
+
+async def complete_onboarding(update: Update, user_id: int, context: ContextTypes.DEFAULT_TYPE):
+    """Complete onboarding process"""
+    try:
+        # Mark user as onboarded
+        set_onboarded(user_id)
+        
+        # Get completion message based on what was completed
+        from utils import get_user_language
+        from main import MESSAGES
+        language = get_user_language(user_id)
+        
+        income_completed = 'income' in context.user_data
+        goal_completed = 'goal' in context.user_data
+        
+        if income_completed and goal_completed:
+            completion_text = MESSAGES.get(language, MESSAGES["uz"]).get("completion_full", "🎉 Onboarding yakunlandi!")
+        elif goal_completed:
+            completion_text = MESSAGES.get(language, MESSAGES["uz"]).get("completion_partial", "🎉 Onboarding yakunlandi!")
+        else:
+            completion_text = MESSAGES.get(language, MESSAGES["uz"]).get("completion_minimal", "🎉 Onboarding yakunlandi!")
+        
+        await update.message.reply_text(completion_text)
+        
+        # Show main menu
+        await show_main_menu(update)
+        
+    except Exception as e:
+        logger.exception(f"Error completing onboarding: {e}")
+        await update.message.reply_text("❌ Onboarding yakunlashda xatolik.")
 
 async def show_main_menu(update):
-    """Show main menu with reply keyboard"""
-    from main import MAIN_MODULES_KEYBOARD
-    from utils import get_user_language
+    """Show main menu"""
+    if not update.message:
+        return
     
     user_id = getattr(update.message.from_user, 'id', None)
-    language = get_user_language(user_id) if user_id else "uz"
-    keyboard = MAIN_MODULES_KEYBOARD.get(language, MAIN_MODULES_KEYBOARD["uz"])
+    if user_id is None:
+        return
     
-    welcome_text = (
-        "🎉 Tabriklaymiz! Onboarding yakunlandi!\n\n"
-        "🏠 Asosiy menyudan foydalanishingiz mumkin:\n\n"
-        "💰 <b>Kirim/Chiqim</b> - moliyaviy harakatlarni qo'shish\n"
-        "📊 <b>Balans/Tahlil</b> - moliyaviy holatni ko'rish\n"
-        "🤖 <b>AI vositalar</b> - sun'iy intellekt yordamida\n"
-        "⚙️ <b>Sozlamalar/Yordam</b> - bot sozlamalari"
-    )
+    from main import get_keyboard
+    keyboard = get_keyboard(user_id)
     
     await update.message.reply_text(
-        welcome_text, 
-        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
-        parse_mode="HTML"
+        "🏠 Asosiy menyu:",
+        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     )
-    return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Cancel current operation"""
-    if not update.message or not update.message.text:
-        return ConversationHandler.END
-    await update.message.reply_text("❌ Amal bekor qilindi.")
+    """Cancel conversation"""
+    if update.message:
+        await update.message.reply_text(
+            "❌ Bekor qilindi.",
+            reply_markup=ReplyKeyboardRemove()
+        )
     return ConversationHandler.END
 
-# ONBOARDING CONV HANDLER
+# Conversation handler for onboarding
 onboarding_conv_handler = ConversationHandler(
     entry_points=[CommandHandler("start", start)],
     states={

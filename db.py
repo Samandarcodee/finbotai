@@ -5,7 +5,7 @@ Database helper functions for FinBot AI Telegram bot.
 
 import sqlite3
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timedelta
 from loguru import logger
 
 # Database file path
@@ -49,6 +49,7 @@ def init_db():
                 daily_reminder BOOLEAN DEFAULT 0,
                 weekly_report BOOLEAN DEFAULT 0,
                 monthly_report BOOLEAN DEFAULT 0,
+                onboarding_done INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users (user_id)
@@ -160,7 +161,8 @@ def get_user_settings(user_id):
                 'auto_reports': False,
                 'daily_reminder': False,
                 'weekly_report': False,
-                'monthly_report': False
+                'monthly_report': False,
+                'onboarding_done': False
             }
         
         c = conn.cursor()
@@ -179,7 +181,8 @@ def get_user_settings(user_id):
                 'auto_reports': False,
                 'daily_reminder': False,
                 'weekly_report': False,
-                'monthly_report': False
+                'monthly_report': False,
+                'onboarding_done': False
             }
     except Exception as e:
         logger.exception(f"Get user settings error: {e}")
@@ -190,7 +193,8 @@ def get_user_settings(user_id):
             'auto_reports': False,
             'daily_reminder': False,
             'weekly_report': False,
-            'monthly_report': False
+            'monthly_report': False,
+            'onboarding_done': False
         }
 
 def create_user(user_id, username=None, first_name=None, last_name=None):
@@ -216,8 +220,8 @@ def create_user(user_id, username=None, first_name=None, last_name=None):
         
         # Create default settings
         c.execute("""
-            INSERT INTO user_settings (user_id, language, currency, notifications, auto_reports)
-            VALUES (?, 'uz', 'UZS', 1, 0)
+            INSERT INTO user_settings (user_id, language, currency, notifications, auto_reports, onboarding_done)
+            VALUES (?, 'uz', 'UZS', 1, 0, 0)
         """, (user_id,))
         
         conn.commit()
@@ -509,4 +513,120 @@ def get_users_with_auto_reports():
         
     except Exception as e:
         logger.exception(f"Get users with auto reports error: {e}")
-        return [] 
+        return []
+
+# Legacy functions for backward compatibility
+def get_currency_code(text):
+    """Extract currency code from text"""
+    if text is None:
+        return "UZS"
+    
+    text_lower = text.lower()
+    if "so'm" in text_lower or "uz" in text_lower or "🇺🇿" in text:
+        return "UZS"
+    elif "dollar" in text_lower or "$" in text or "usd" in text_lower or "💵" in text:
+        return "USD"
+    elif "euro" in text_lower or "eur" in text_lower or "💶" in text:
+        return "EUR"
+    elif "rubl" in text_lower or "rub" in text_lower or "🇷🇺" in text:
+        return "RUB"
+    elif "tenge" in text_lower or "kzt" in text_lower or "🇰🇿" in text:
+        return "KZT"
+    elif "som" in text_lower or "kgs" in text_lower or "🇰🇬" in text:
+        return "KGS"
+    elif "lira" in text_lower or "try" in text_lower or "🇹🇷" in text:
+        return "TRY"
+    elif "yuan" in text_lower or "cny" in text_lower or "🇨🇳" in text:
+        return "CNY"
+    elif "yen" in text_lower or "jpy" in text_lower or "🇯🇵" in text:
+        return "JPY"
+    return "UZS"
+
+def is_onboarded(user_id):
+    """Check if user has completed onboarding"""
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            return False
+        
+        c = conn.cursor()
+        c.execute("SELECT onboarding_done FROM user_settings WHERE user_id = ?", (user_id,))
+        row = c.fetchone()
+        conn.close()
+        
+        if row and row[0]:
+            return bool(row[0])
+        return False
+    except Exception as e:
+        logger.exception(f"Error checking onboarding status: {e}")
+        return False
+
+def set_onboarded(user_id):
+    """Mark user as onboarded"""
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            return False
+        
+        c = conn.cursor()
+        c.execute("UPDATE user_settings SET onboarding_done = 1 WHERE user_id = ?", (user_id,))
+        conn.commit()
+        conn.close()
+        logger.info(f"User {user_id} marked as onboarded")
+        return True
+    except Exception as e:
+        logger.exception(f"Error setting onboarding status: {e}")
+        return False
+
+def format_currency(amount, currency="so'm"):
+    """Format currency with proper spacing"""
+    return f"{amount:,} {currency}"
+
+def validate_amount(amount_str):
+    """Validate and parse amount string"""
+    try:
+        # Remove spaces and common separators
+        cleaned = amount_str.replace(' ', '').replace(',', '').replace('.', '')
+        amount = int(cleaned)
+        if amount <= 0:
+            return None, "Miqdor 0 dan katta bo'lishi kerak! Masalan: 1 000 000"
+        if amount > 999999999:
+            return None, "Miqdor juda katta! Iltimos, kichikroq miqdorni kiriting. Masalan: 1 000 000"
+        return amount, None
+    except ValueError:
+        return None, "Noto'g'ri format! Masalan: 1 000 000 yoki 5000000."
+
+def get_all_user_ids():
+    """Get all user IDs from database"""
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            return []
+        
+        c = conn.cursor()
+        c.execute("SELECT user_id FROM users")
+        user_ids = [row[0] for row in c.fetchall()]
+        conn.close()
+        return user_ids
+    except Exception as e:
+        logger.exception(f"Error getting user IDs: {e}")
+        return []
+
+def get_weekly_stats(user_id):
+    """Get weekly income and expense statistics"""
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            return 0, 0
+        
+        c = conn.cursor()
+        week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+        c.execute("SELECT SUM(amount) FROM transactions WHERE user_id = ? AND type = 'income' AND date >= ?", (user_id, week_ago))
+        kirim = c.fetchone()[0] or 0
+        c.execute("SELECT SUM(amount) FROM transactions WHERE user_id = ? AND type = 'expense' AND date >= ?", (user_id, week_ago))
+        chiqim = c.fetchone()[0] or 0
+        conn.close()
+        return kirim, chiqim
+    except Exception as e:
+        logger.exception(f"Error getting weekly stats: {e}")
+        return 0, 0 
