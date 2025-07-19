@@ -70,6 +70,19 @@ def format_amount(amount, user_id):
     else:
         return f"{formatted_amount} {symbol}" 
 
+def validate_amount(text):
+    """Validate and parse an amount string. Returns (amount, error)."""
+    try:
+        cleaned = text.replace(' ', '').replace(',', '').replace("'", '').replace('so\'m', '').replace('сум', '').replace('UZS', '').replace('$', '').replace('USD', '').replace('€', '').replace('EUR', '').replace('₽', '').replace('RUB', '').replace('₸', '').replace('KZT', '').replace('с', '').replace('KGS', '').replace('₺', '').replace('TRY', '').replace('¥', '').replace('CNY', '').replace('JPY', '').strip()
+        if not cleaned.isdigit():
+            return None, "Noto'g'ri miqdor! Masalan: 5 000 000"
+        amount = int(cleaned)
+        if amount <= 0:
+            return None, "Miqdor 0 dan katta bo'lishi kerak!"
+        return amount, None
+    except Exception:
+        return None, "Noto'g'ri miqdor! Masalan: 5 000 000"
+
 def get_navigation_keyboard(extra_buttons=None):
     """Return a keyboard with extra buttons and navigation buttons."""
     base = ["🔙 Orqaga", "🏠 Bosh menyu"]
