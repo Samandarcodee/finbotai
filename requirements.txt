@@ -1,8 +1,4 @@
 python-telegram-bot==20.7
 loguru==0.7.2
 python-dotenv==1.0.0
-APScheduler==3.10.4
-sqlite3
-asyncio
-datetime
-json 
+APScheduler==3.10.4 
