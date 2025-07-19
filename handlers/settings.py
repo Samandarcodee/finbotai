@@ -376,10 +376,26 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
                 reply_markup=reply_markup
             )
             return SETTINGS_LANGUAGE
+        
         c = conn.cursor()
-        c.execute("UPDATE user_settings SET language = ? WHERE user_id = ?", (language, user_id))
+        
+        # Check if user exists in user_settings
+        c.execute("SELECT user_id FROM user_settings WHERE user_id = ?", (user_id,))
+        user_exists = c.fetchone()
+        
+        if user_exists:
+            # Update existing user settings
+            c.execute("UPDATE user_settings SET language = ? WHERE user_id = ?", (language, user_id))
+        else:
+            # Create new user settings record
+            c.execute("""
+                INSERT INTO user_settings (user_id, language, currency, notifications, auto_reports) 
+                VALUES (?, ?, 'UZS', 1, 0)
+            """, (user_id, language))
+        
         conn.commit()
         conn.close()
+        
         # Yangi tilda xabar yuborish
         from constants import MESSAGES
         msg = MESSAGES[language]["language_changed"].format(language=text)
@@ -387,6 +403,7 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
         # Bosh menyuni yangi til bilan ko'rsatish
         from handlers.start import show_main_menu
         return await show_main_menu(update, context)
+        
     except Exception as e:
         logger.exception(f"Language change error: {e}")
         reply_markup = build_reply_keyboard([
