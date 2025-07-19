@@ -68,16 +68,106 @@ MESSAGES = {
         "main_menu": "🏠 Bosh menyu",
         "invalid_choice": "❌ Noto'g'ri tanlov. Qaytadan tanlang.",
         "error_soft": "🤖 Xatolik yuz berdi, lekin qo'rqmang, jamoamiz bu haqida xabardor.",
+        "welcome": "👋 Assalomu alaykum, {name}!\n\n💡 Siz o'z moliyaviy kelajagingizni nazorat qilmoqchimisiz?\nMen sizga bu yo'lda yordam beruvchi FinBot AIman 🤖\n\n🎯 <b>Onboarding (2-4 bosqich):</b>\n1️⃣ Til tanlash (majburiy)\n2️⃣ Valyuta tanlash (majburiy)\n3️⃣ Daromad kiritish (ixtiyoriy)\n4️⃣ Maqsad qo'yish (ixtiyoriy)\n\n⚡️ 2 daqiqa vaqt ketadi",
+        "language_select": "1️⃣ Tilni tanlang:",
+        "currency_select": "2️⃣ Valyutani tanlang:",
+        "income_input": "3️⃣ Oylik taxminiy daromadingizni kiriting yoki o'tkazib yuboring:\n\n💡 Bu ma'lumot AI byudjet tavsiyalari uchun ishlatiladi\nMasalan: 3 000 000",
+        "goal_input": "4️⃣ Maqsad qo'yish yoki o'tkazib yuboring:\n\n💡 Maqsad qo'yganingizda AI monitoring yordam beradi\nMasalan: iPhone 15 Pro, o'qish, safar",
+        "skip_option": "⏭ O'tkazib yuborish",
+        "completion_full": "🎉 Onboarding yakunlandi!\n\n✅ Til va valyuta sozlandi\n✅ Daromad kiritildi\n✅ Maqsad qo'yildi\n\n🤖 AI byudjet tavsiyalari mavjud!\n🏠 Asosiy menyudan foydalanishingiz mumkin!",
+        "completion_partial": "🎉 Onboarding yakunlandi!\n\n✅ Til va valyuta sozlandi\n✅ Maqsad qo'yildi\n\n🏠 Asosiy menyudan foydalanishingiz mumkin!",
+        "completion_minimal": "🎉 Onboarding yakunlandi!\n\n✅ Til va valyuta sozlandi\n⏭ Daromad va maqsad o'tkazib yuborildi\n\n🏠 Asosiy menyudan foydalanishingiz mumkin!",
+        "error_format": "❌ Noto'g'ri format! Masalan: 3 000 000 yoki 5000000.\n\nYoki ⏭ O'tkazib yuborish tugmasini bosing.",
+        "error_general": "❌ Xatolik yuz berdi. Qaytadan urinib ko'ring.",
+        "user_not_found": "❌ Foydalanuvchi ma'lumotlari topilmadi."
+    },
+    "ru": {
+        "main_menu": "🏠 Главное меню",
+        "invalid_choice": "❌ Неправильный выбор. Выберите снова.",
+        "error_soft": "🤖 Произошла ошибка, но не волнуйтесь, наша команда в курсе.",
+        "welcome": "👋 Здравствуйте, {name}!\n\n💡 Хотите контролировать свое финансовое будущее?\nЯ FinBot AI, который поможет вам в этом 🤖\n\n🎯 <b>Настройка (2-4 этапа):</b>\n1️⃣ Выбор языка (обязательно)\n2️⃣ Выбор валюты (обязательно)\n3️⃣ Ввод дохода (по желанию)\n4️⃣ Постановка цели (по желанию)\n\n⚡️ Займет 2 минуты",
+        "language_select": "1️⃣ Выберите язык:",
+        "currency_select": "2️⃣ Выберите валюту:",
+        "income_input": "3️⃣ Введите примерный месячный доход или пропустите:\n\n💡 Эта информация используется для AI рекомендаций по бюджету\nНапример: 3 000 000",
+        "goal_input": "4️⃣ Поставьте цель или пропустите:\n\n💡 При постановке цели AI мониторинг поможет вам\nНапример: iPhone 15 Pro, учеба, путешествие",
+        "skip_option": "⏭ Пропустить",
+        "completion_full": "🎉 Настройка завершена!\n\n✅ Язык и валюта настроены\n✅ Доход введен\n✅ Цель поставлена\n\n🤖 Доступны AI рекомендации по бюджету!\n🏠 Можете использовать главное меню!",
+        "completion_partial": "🎉 Настройка завершена!\n\n✅ Язык и валюта настроены\n✅ Цель поставлена\n\n🏠 Можете использовать главное меню!",
+        "completion_minimal": "🎉 Настройка завершена!\n\n✅ Язык и валюта настроены\n⏭ Доход и цель пропущены\n\n🏠 Можете использовать главное меню!",
+        "error_format": "❌ Неправильный формат! Например: 3 000 000 или 5000000.\n\nИли нажмите кнопку ⏭ Пропустить.",
+        "error_general": "❌ Произошла ошибка. Попробуйте снова.",
+        "user_not_found": "❌ Данные пользователя не найдены."
+    },
+    "en": {
+        "main_menu": "🏠 Main Menu",
+        "invalid_choice": "❌ Invalid choice. Please select again.",
+        "error_soft": "🤖 An error occurred, but don't worry, our team is aware.",
+        "welcome": "👋 Hello, {name}!\n\n💡 Want to control your financial future?\nI'm FinBot AI who will help you with this 🤖\n\n🎯 <b>Setup (2-4 steps):</b>\n1️⃣ Language selection (required)\n2️⃣ Currency selection (required)\n3️⃣ Income input (optional)\n4️⃣ Goal setting (optional)\n\n⚡️ Takes 2 minutes",
+        "language_select": "1️⃣ Select language:",
+        "currency_select": "2️⃣ Select currency:",
+        "income_input": "3️⃣ Enter your approximate monthly income or skip:\n\n💡 This information is used for AI budget recommendations\nFor example: 3 000 000",
+        "goal_input": "4️⃣ Set a goal or skip:\n\n💡 When setting a goal, AI monitoring will help you\nFor example: iPhone 15 Pro, study, travel",
+        "skip_option": "⏭ Skip",
+        "completion_full": "🎉 Setup completed!\n\n✅ Language and currency set\n✅ Income entered\n✅ Goal set\n\n🤖 AI budget recommendations available!\n🏠 You can use the main menu!",
+        "completion_partial": "🎉 Setup completed!\n\n✅ Language and currency set\n✅ Goal set\n\n🏠 You can use the main menu!",
+        "completion_minimal": "🎉 Setup completed!\n\n✅ Language and currency set\n⏭ Income and goal skipped\n\n🏠 You can use the main menu!",
+        "error_format": "❌ Wrong format! For example: 3 000 000 or 5000000.\n\nOr press the ⏭ Skip button.",
+        "error_general": "❌ An error occurred. Please try again.",
+        "user_not_found": "❌ User data not found."
     }
 }
 
 # Keyboard layouts
-MAIN_MODULES_KEYBOARD = [
-    ["💰 Kirim/Chiqim"],
-    ["📊 Balans/Tahlil"],
-    ["🤖 AI vositalar"],
-    ["⚙️ Sozlamalar/Yordam"]
-]
+MAIN_MODULES_KEYBOARD = {
+    "uz": [
+        ["💰 Kirim/Chiqim"],
+        ["📊 Balans/Tahlil"],
+        ["🤖 AI vositalar"],
+        ["⚙️ Sozlamalar/Yordam"]
+    ],
+    "ru": [
+        ["💰 Доходы/Расходы"],
+        ["📊 Баланс/Анализ"],
+        ["🤖 AI инструменты"],
+        ["⚙️ Настройки/Помощь"]
+    ],
+    "en": [
+        ["💰 Income/Expense"],
+        ["📊 Balance/Analysis"],
+        ["🤖 AI Tools"],
+        ["⚙️ Settings/Help"]
+    ]
+}
+
+def get_user_language(user_id):
+    """Get user language from database"""
+    try:
+        from db import get_db_connection
+        conn = get_db_connection()
+        if conn is None:
+            return "uz"  # Default to Uzbek
+        
+        c = conn.cursor()
+        c.execute("SELECT language FROM user_settings WHERE user_id = ?", (user_id,))
+        row = c.fetchone()
+        conn.close()
+        
+        if row and row[0]:
+            return row[0]
+        return "uz"  # Default to Uzbek
+    except Exception:
+        return "uz"  # Default to Uzbek
+
+def get_message(key, user_id=None, **kwargs):
+    """Get message in user's language"""
+    language = get_user_language(user_id) if user_id else "uz"
+    message = MESSAGES.get(language, MESSAGES["uz"]).get(key, MESSAGES["uz"].get(key, key))
+    return message.format(**kwargs) if kwargs else message
+
+def get_keyboard(user_id=None):
+    """Get keyboard in user's language"""
+    language = get_user_language(user_id) if user_id else "uz"
+    return MAIN_MODULES_KEYBOARD.get(language, MAIN_MODULES_KEYBOARD["uz"])
 
 async def help_command(update, context):
     """Help command handler"""
