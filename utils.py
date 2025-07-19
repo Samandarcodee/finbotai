@@ -3,6 +3,7 @@
 
 import sqlite3
 from db import get_db_connection
+from constants import NAV_COMMANDS
 
 # Currency symbols
 CURRENCY_SYMBOLS = {
@@ -104,3 +105,6 @@ def build_reply_keyboard(buttons, resize=True, one_time=False, add_navigation=Tr
         if not any(set(nav) <= set(row) for row in keyboard):
             keyboard += get_navigation_keyboard()
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=resize, one_time_keyboard=one_time) 
+
+def is_navigation_command(text):
+    return text.strip() in NAV_COMMANDS 

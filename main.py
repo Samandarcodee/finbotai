@@ -71,7 +71,7 @@ from constants import (
 )
 
 # Import utils for shared functions
-from utils import get_user_language, get_user_currency, format_amount, build_reply_keyboard
+from utils import get_user_language, get_user_currency, format_amount, build_reply_keyboard, is_navigation_command
 
 async def help_command(update, context):
     """Help command handler"""
@@ -158,57 +158,46 @@ async def handle_kirim_chiqim_menu(update, context):
     return ConversationHandler.END
 
 async def message_handler(update, context):
-    """Main message handler with enhanced AI and settings support"""
-    if not update.message or not update.message.text or not hasattr(update.message, 'from_user'):
+    if not update.message or not update.message.text:
         return
-    text = update.message.text
+    text = update.message.text.strip()
+    if is_navigation_command(text):
+        return await navigate_to_main_menu(update, context)
     user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
-    
-    # Handle main menu commands
-    if text.lower() in ["/start", "/cancel", "🏠 bosh menyu", "🏠 bosh menyu", "🔙 orqaga"]:
-        return await start(update, context)
-    
-    if user_id is None:
-        return ConversationHandler.END
+    match text:
+        case "💰 Kirim/Chiqim":
+            return await handle_kirim_chiqim_menu(update, context)
+        case "📊 Balans/Tahlil":
+            # Balans/tahlil funksiyasi (agar kerak bo'lsa)
+            pass
+        case "🤖 AI vositalar":
+            return await show_ai_menu(update, user_id)
+        case "⚙️ Sozlamalar/Yordam":
+            return await show_settings(update, user_id)
+        case _:
+            await update.message.reply_text("❌ Noto'g'ri tanlov. Bosh menyuga qaytmoqdamiz.")
+            return await navigate_to_main_menu(update, context)
 
-    # Handle main menu options
-    if text == "💰 Kirim/Chiqim":
-        return await handle_kirim_chiqim_menu(update, context)
-    elif text == "📊 Balans/Tahlil":
-        await update.message.reply_text(
-            "Balans yoki tahlilni tanlang:",
-            reply_markup=ReplyKeyboardMarkup([
-                ["📊 Balans", "📈 Tahlil"],
-                ["🔙 Orqaga", "🏠 Bosh menyu"]
-            ], resize_keyboard=True, one_time_keyboard=True)
-        )
-        return ConversationHandler.END
-    elif text == "📊 Balans":
-        await show_balance(update, user_id)
-        return ConversationHandler.END
-    elif text == "📈 Tahlil":
-        await show_analysis(update, user_id)
-        return ConversationHandler.END
-    elif text == "🤖 AI vositalar":
-        return await show_ai_menu(update, user_id)
-    elif text == "⚙️ Sozlamalar/Yordam":
-        return await show_settings(update, user_id)
-    elif text == "🔙 Orqaga":
-        return await start(update, context)
-    elif text == "🏠 Bosh menyu":
-        return await start(update, context)
-    else:
-        await update.message.reply_text(get_message("invalid_choice", user_id))
-        return ConversationHandler.END
+async def navigate_to_main_menu(update, context):
+    from handlers.start import show_main_menu
+    return await show_main_menu(update, context)
+
+async def universal_fallback(update, context):
+    if update.message and update.message.text:
+        text = update.message.text.strip()
+        if is_navigation_command(text):
+            return await navigate_to_main_menu(update, context)
+        else:
+            await update.message.reply_text("❌ Noto'g'ri tanlov. Bosh menyuga qaytmoqdamiz.")
+            return await navigate_to_main_menu(update, context)
+    return ConversationHandler.END
 
 async def inline_button_handler(update, context):
-    """Handle inline button callbacks"""
     if not update.callback_query:
-        return
-    
+        return await navigate_to_main_menu(update, context)
     query = update.callback_query
     await query.answer()
-    
+    # Qolgan callback ishlovchi kod shu yerda bo‘ladi
     if query.data.startswith("balance_"):
         user_id = query.from_user.id
         await show_balance(update, user_id)
@@ -341,36 +330,6 @@ async def global_error_handler(update, context):
         await update.effective_message.reply_text(
             get_message("error_soft", update.effective_user.id if update.effective_user else None)
         )
-
-# Universal fallback handler for all conversations
-async def universal_fallback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Universal fallback handler that redirects to main menu"""
-    if not update.message:
-        return ConversationHandler.END
-    
-    user_id = getattr(update.message.from_user, 'id', None)
-    if not user_id:
-        return ConversationHandler.END
-    
-    # Check for navigation commands
-    text = update.message.text
-    if text in ["🏠 Bosh menyu", "/start", "/cancel"]:
-        from handlers.start import show_main_menu
-        return await show_main_menu(update, context)
-    elif text == "🔙 Orqaga":
-        # Try to go back to previous menu
-        from handlers.start import show_main_menu
-        return await show_main_menu(update, context)
-    else:
-        # Invalid choice - redirect to main menu
-        await update.message.reply_text(
-            "❌ Noto'g'ri tanlov. Bosh menyuga qaytamiz.",
-            reply_markup=ReplyKeyboardMarkup([
-                ["💰 Kirim/Chiqim", "📊 Balans/Tahlil"],
-                ["🤖 AI vositalar", "⚙️ Sozlamalar/Yordam"]
-            ] + [["🔙 Orqaga", "🏠 Bosh menyu"]], resize_keyboard=True)
-        )
-        return ConversationHandler.END
 
 def setup_schedulers(app):
     """Setup scheduled tasks"""
