@@ -42,7 +42,7 @@ from handlers.push import (
 from handlers.settings import (
     show_settings, settings_handler, currency_selection_handler, 
     language_selection_handler, delete_data_handler,
-    SETTINGS_CURRENCY, SETTINGS_LANGUAGE, SETTINGS_DELETE
+    SETTINGS_CURRENCY, SETTINGS_LANGUAGE, SETTINGS_DELETE, SETTINGS_MENU
 )
 from handlers.goals import (
     ai_goal_start, ai_goal_name, ai_goal_amount, ai_goal_deadline,
@@ -442,6 +442,7 @@ def main():
                 MessageHandler(filters.Regex("^⚙️ Sozlamalar/Yordam$"), show_settings)
             ],
             states={
+                SETTINGS_MENU: [MessageHandler(filters.TEXT & ~filters.COMMAND, settings_handler)],
                 SETTINGS_CURRENCY: [MessageHandler(filters.TEXT & ~filters.COMMAND, currency_selection_handler)],
                 SETTINGS_LANGUAGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, language_selection_handler)],
                 SETTINGS_DELETE: [MessageHandler(filters.TEXT & ~filters.COMMAND, delete_data_handler)],

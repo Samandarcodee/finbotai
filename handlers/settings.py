@@ -20,6 +20,8 @@ from handlers.start import start
 SETTINGS_CURRENCY = 9
 SETTINGS_LANGUAGE = 10
 SETTINGS_DELETE = 7
+# State constants for ConversationHandler
+SETTINGS_MENU = 5
 
 # MESSAGES constant
 MESSAGES = {
