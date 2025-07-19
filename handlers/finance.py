@@ -32,7 +32,10 @@ def get_category_keyboard(is_income=True):
             ["🏠 Uy", "📱 Aloqa"],
             ["💳 Boshqa chiqim"]
         ]
-    return build_reply_keyboard(categories, resize=True, one_time=True)
+    # Faqat Bosh menyu tugmasi
+    categories.append(["🏠 Bosh menyu"])
+    from utils import build_reply_keyboard
+    return build_reply_keyboard(categories, resize=True, one_time=True, add_navigation=False)
 
 async def show_balance(update: Update, user_id: int):
     """Show user balance with improved formatting and navigation"""
@@ -279,7 +282,7 @@ async def income_category_selected(update: Update, context: ContextTypes.DEFAULT
     context.user_data['selected_income_category'] = selected_category
     keyboard = [
         ["💵 Kirim qo'shish", "💸 Chiqim qo'shish"],
-        ["🏠 Bosh menyu"]
+        ["�� Bosh menyu"]
     ]
     await update.message.reply_text(
         f"✅ Kategoriya: {selected_category}\n\nKirim miqdorini kiriting (masalan: 1 000 000):",
