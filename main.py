@@ -2,13 +2,14 @@
 # Entry point for FinBot AI Telegram bot. Only contains bot setup, handler registration, and startup logic.
 
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ConversationHandler, CallbackQueryHandler
-from telegram import ReplyKeyboardMarkup
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
 from loguru import logger
 import os
 from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from telegram.error import TelegramError
 from dotenv import load_dotenv
+import sqlite3
 
 # Load environment variables (for local development)
 try:
@@ -137,18 +138,21 @@ async def message_handler(update, context):
         return
     text = update.message.text
     user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
-    if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu", "🏠 Bosh menyu"]:
+    
+    # Handle main menu commands
+    if text.lower() in ["/start", "/cancel", "🏠 bosh menyu", "🏠 bosh menyu", "🔙 orqaga"]:
         return await start(update, context)
+    
     if user_id is None:
         return ConversationHandler.END
 
-    # MODULLAR
+    # Handle main menu options
     if text == "💰 Kirim/Chiqim":
         await update.message.reply_text(
             "Kirim yoki chiqim qo'shish uchun tanlang:",
             reply_markup=ReplyKeyboardMarkup([
                 ["💵 Kirim qo'shish", "💸 Chiqim qo'shish"],
-                ["🔙 Orqaga"]
+                ["🔙 Orqaga", "🏠 Bosh menyu"]
             ], resize_keyboard=True, one_time_keyboard=True)
         )
         return ConversationHandler.END
@@ -157,16 +161,14 @@ async def message_handler(update, context):
             "Balans yoki tahlilni tanlang:",
             reply_markup=ReplyKeyboardMarkup([
                 ["📊 Balans", "📈 Tahlil"],
-                ["🔙 Orqaga"]
+                ["🔙 Orqaga", "🏠 Bosh menyu"]
             ], resize_keyboard=True, one_time_keyboard=True)
         )
         return ConversationHandler.END
     elif text == "📊 Balans":
-        from handlers.finance import show_balance
         await show_balance(update, user_id)
         return ConversationHandler.END
     elif text == "📈 Tahlil":
-        from handlers.finance import show_analysis
         await show_analysis(update, user_id)
         return ConversationHandler.END
     elif text == "🤖 AI vositalar":
@@ -198,9 +200,6 @@ async def inline_button_handler(update, context):
     elif query.data.startswith("ai_advice_"):
         user_id = query.from_user.id
         await show_ai_advice(update, user_id)
-    elif query.data.startswith("ai_analysis_"):
-        user_id = query.from_user.id
-        await show_ai_analysis(update, user_id)
 
 async def show_stats(update, context):
     """Show bot statistics for admin"""
@@ -212,16 +211,11 @@ async def show_stats(update, context):
         return
     
     try:
-        from db import get_db_connection
-        conn = get_db_connection()
-        if conn is None:
-            await update.message.reply_text("❌ Ma'lumotlar bazasiga ulanishda xatolik.")
-            return
-        
+        conn = sqlite3.connect('finbot.db')
         c = conn.cursor()
         
         # Get user count
-        c.execute("SELECT COUNT(*) FROM users")
+        c.execute("SELECT COUNT(DISTINCT user_id) FROM user_settings")
         user_count = c.fetchone()[0]
         
         # Get transaction count
@@ -233,29 +227,24 @@ async def show_stats(update, context):
         c.execute("SELECT COUNT(*) FROM transactions WHERE date LIKE ?", (f"{today}%",))
         today_transactions = c.fetchone()[0]
         
-        # Get active goals
-        c.execute("SELECT COUNT(*) FROM goals WHERE status = 'active'")
-        active_goals = c.fetchone()[0]
-        
         conn.close()
         
-        stats_text = f"""📊 <b>Bot statistikasi:</b>
-
-👥 <b>Foydalanuvchilar:</b> {user_count}
-💰 <b>Jami tranzaksiyalar:</b> {transaction_count}
-📅 <b>Bugungi tranzaksiyalar:</b> {today_transactions}
-🎯 <b>Faol maqsadlar:</b> {active_goals}
-
-⏰ <b>Vaqt:</b> {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}"""
+        stats_text = (
+            f"📊 <b>Bot statistikasi</b>\n\n"
+            f"👥 Foydalanuvchilar: {user_count}\n"
+            f"📝 Jami tranzaksiyalar: {transaction_count}\n"
+            f"📅 Bugungi tranzaksiyalar: {today_transactions}\n"
+            f"🕐 Hisobot vaqti: {datetime.now().strftime('%H:%M:%S')}"
+        )
         
         await update.message.reply_text(stats_text, parse_mode="HTML")
         
     except Exception as e:
         logger.exception(f"Stats error: {e}")
-        await update.message.reply_text("❌ Statistikani olishda xatolik.")
+        await update.message.reply_text("❌ Statistika olishda xatolik.")
 
 async def show_history(update, context):
-    """Show recent transactions for admin"""
+    """Show recent transaction history for admin"""
     if not update.message or not hasattr(update.message, 'from_user'):
         return
     
@@ -264,23 +253,16 @@ async def show_history(update, context):
         return
     
     try:
-        from db import get_db_connection
-        conn = get_db_connection()
-        if conn is None:
-            await update.message.reply_text("❌ Ma'lumotlar bazasiga ulanishda xatolik.")
-            return
-        
+        conn = sqlite3.connect('finbot.db')
         c = conn.cursor()
         
-        # Get recent transactions
         c.execute("""
-            SELECT t.user_id, t.type, t.amount, t.category, t.date, u.first_name
+            SELECT t.user_id, t.type, t.amount, t.note, t.date, u.first_name
             FROM transactions t
-            LEFT JOIN users u ON t.user_id = u.user_id
+            LEFT JOIN user_settings u ON t.user_id = u.user_id
             ORDER BY t.date DESC
             LIMIT 10
         """)
-        
         transactions = c.fetchall()
         conn.close()
         
@@ -400,13 +382,13 @@ def main():
         # Create application
         app = ApplicationBuilder().token(BOT_TOKEN).build()
         
-        # Add conversation handlers
+        # Add conversation handlers in correct order
         app.add_handler(onboarding_conv_handler)
         app.add_handler(push_conv_handler)
         app.add_handler(ai_goal_conv_handler)
         app.add_handler(ai_budget_conv_handler)
         
-        # Add finance conversation handler
+        # Add finance conversation handler with improved structure
         from handlers.finance import (
             add_income, income_category_selected, income_amount, income_note,
             expense_category_selected, expense_amount, expense_note, cancel
@@ -414,8 +396,8 @@ def main():
         
         finance_conv_handler = ConversationHandler(
             entry_points=[
-                MessageHandler(filters.Regex("^💵 Kirim qo'shish$"), lambda u, c: income_category_selected(u, c)),
-                MessageHandler(filters.Regex("^💸 Chiqim qo'shish$"), lambda u, c: expense_category_selected(u, c))
+                MessageHandler(filters.Regex("^💵 Kirim qo'shish$"), income_category_selected),
+                MessageHandler(filters.Regex("^💸 Chiqim qo'shish$"), expense_category_selected)
             ],
             states={
                 INCOME_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, income_amount)],
@@ -423,34 +405,39 @@ def main():
                 EXPENSE_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, expense_amount)],
                 EXPENSE_NOTE: [MessageHandler(filters.TEXT & ~filters.COMMAND, expense_note)],
             },
-            fallbacks=[MessageHandler(filters.Regex("^(❌ Bekor qilish|🏠 Bosh menyu|/cancel)$"), cancel)]
+            fallbacks=[
+                MessageHandler(filters.Regex("^(❌ Bekor qilish|🏠 Bosh menyu|🔙 Orqaga|/cancel)$"), cancel)
+            ]
         )
         app.add_handler(finance_conv_handler)
         
-
-        
-        # Add settings conversation handlers
+        # Add settings conversation handlers with improved structure
         settings_conv_handler = ConversationHandler(
-            entry_points=[MessageHandler(filters.Regex("^⚙️ Sozlamalar/Yordam$"), lambda u, c: show_settings(u, u.effective_user.id))],
+            entry_points=[
+                MessageHandler(filters.Regex("^⚙️ Sozlamalar/Yordam$"), show_settings)
+            ],
             states={
-                5: [MessageHandler(filters.TEXT & ~filters.COMMAND, settings_handler)],  # Main settings menu state
                 SETTINGS_CURRENCY: [MessageHandler(filters.TEXT & ~filters.COMMAND, currency_selection_handler)],
                 SETTINGS_LANGUAGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, language_selection_handler)],
                 SETTINGS_DELETE: [MessageHandler(filters.TEXT & ~filters.COMMAND, delete_data_handler)],
             },
-            fallbacks=[MessageHandler(filters.Regex("^(🔙 Orqaga|🏠 Bosh menyu|/start|/cancel)$"), lambda u, c: start(u, c))]
+            fallbacks=[
+                MessageHandler(filters.Regex("^(🔙 Orqaga|🏠 Bosh menyu|/start|/cancel)$"), start)
+            ]
         )
         app.add_handler(settings_conv_handler)
         
-        # Add AI menu handler
-        from handlers.ai import handle_ai_menu
-        
+        # Add AI menu handler with improved structure
         ai_conv_handler = ConversationHandler(
-            entry_points=[MessageHandler(filters.Regex("^🤖 AI vositalar$"), lambda u, c: show_ai_menu(u, u.effective_user.id))],
+            entry_points=[
+                MessageHandler(filters.Regex("^🤖 AI vositalar$"), show_ai_menu)
+            ],
             states={
-                100: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_ai_menu)]  # AI menu state
+                100: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_ai_menu)]
             },
-            fallbacks=[MessageHandler(filters.Regex("^(🔙 Orqaga|🏠 Bosh menyu|/cancel)$"), lambda u, c: start(u, c))]
+            fallbacks=[
+                MessageHandler(filters.Regex("^(🔙 Orqaga|🏠 Bosh menyu|/cancel)$"), start)
+            ]
         )
         app.add_handler(ai_conv_handler)
         
@@ -461,9 +448,11 @@ def main():
         app.add_handler(CommandHandler("history", show_history))
         app.add_handler(CommandHandler("admin", admin_panel))
         
+        # Add callback query handler
+        app.add_handler(CallbackQueryHandler(inline_button_handler))
+        
         # Add message handlers - this should be last to catch unmatched messages
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
-        app.add_handler(CallbackQueryHandler(inline_button_handler))
         
         # Add error handler
         app.add_error_handler(global_error_handler)

@@ -60,24 +60,35 @@ MESSAGES = {
 }
 
 async def show_ai_menu(update: Update, user_id: int):
-    """Show AI tools menu"""
+    """Show AI tools menu with improved error handling"""
     try:
+        from constants import get_message
+        from utils import get_user_language
+        
+        language = get_user_language(user_id)
+        ai_menu_text = get_message("ai_menu", user_id)
+        
+        # Create AI menu keyboard
         keyboard = [
-            ["💰 AI Byudjet Tavsiyasi", "📊 AI Xarajatlar Tahlili"],
-            ["🎯 AI Maqsad Monitoring", "💡 AI Moliyaviy Maslahat"],
-            ["💎 AI Tejash Maslahatlari", "📈 AI Investitsiya Maslahati"],
-            ["🔙 Orqaga"]
+            ["🧠 AI Moliyaviy Maslahat", "📊 AI Xarajatlar Tahlili"],
+            ["💰 AI Byudjet Tavsiyasi", "🎯 AI Maqsad Monitoring"],
+            ["💡 AI Tejash Maslahatlari", "📈 AI Investitsiya Maslahati"],
+            ["🔙 Orqaga", "🏠 Bosh menyu"]
         ]
         
         if update.message:
             await update.message.reply_text(
-                MESSAGES["uz"]["ai_menu"],
+                ai_menu_text,
                 reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
-                parse_mode=ParseMode.HTML
+                parse_mode="HTML"
             )
-            return 100  # Return AI menu state
+        return 100  # AI menu state
+        
     except Exception as e:
         logger.exception(f"AI menu error: {e}")
+        if update.message:
+            await update.message.reply_text("❌ AI menyusini ko'rishda xatolik.")
+        return ConversationHandler.END
 
 async def show_ai_analysis(update: Update, user_id: int):
     """Show AI-powered spending analysis with loading and HTML/emoji formatting."""
@@ -214,15 +225,18 @@ async def show_ai_advice(update: Update, user_id: int):
             await loading_msg.edit_text(MESSAGES["uz"]["ai_error"])
 
 async def show_budget_advice(update: Update, user_id: int):
-    """Show AI budget advice"""
-    loading_msg = None
+    """Show AI budget advice with improved error handling"""
     try:
+        from constants import MESSAGES
+        from utils import get_user_language, format_amount
+        
+        language = get_user_language(user_id)
+        
+        # Show loading message
         if update.message:
             loading_msg = await update.message.reply_text(MESSAGES["uz"]["loading"])
         
-        settings = get_user_settings(user_id)
-        currency = settings['currency']
-        
+        # Get user's financial data
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         
@@ -231,127 +245,146 @@ async def show_budget_advice(update: Update, user_id: int):
         c.execute("""
             SELECT 
                 SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
-                SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense,
-                category, SUM(amount) as category_total
-            FROM transactions 
-            WHERE user_id = ? AND strftime('%Y-%m', date) = ? AND type = 'expense'
-            GROUP BY category
-            ORDER BY SUM(amount) DESC
-        """, (user_id, current_month))
-        category_data = c.fetchall()
-        
-        c.execute("""
-            SELECT 
-                SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
                 SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense
             FROM transactions 
             WHERE user_id = ? AND strftime('%Y-%m', date) = ?
         """, (user_id, current_month))
         month_data = c.fetchone()
+        
+        # Get category breakdown
+        c.execute("""
+            SELECT category, SUM(amount) 
+            FROM transactions 
+            WHERE user_id = ? AND type = 'expense' AND strftime('%Y-%m', date) = ?
+            GROUP BY category 
+            ORDER BY SUM(amount) DESC
+        """, (user_id, current_month))
+        categories = c.fetchall()
+        
         conn.close()
         
         month_income = month_data[0] or 0
         month_expense = month_data[1] or 0
+        month_balance = month_income - month_expense
         
-        # Generate budget advice
+        # Generate AI advice
+        advice_text = "💰 <b>AI BYUDJET TAVSIYASI</b>\n\n"
+        
         if month_income == 0:
-            advice = "💰 <b>Byudjet tavsiyasi:</b>\n\n❌ Oylik daromad ma'lumotlari yo'q. Avval daromadlaringizni kiritib, keyin qayta urinib ko'ring."
+            advice_text += "📝 <b>Hozircha ma'lumot yo'q</b>\n\n"
+            advice_text += "💡 <b>Tavsiyalar:</b>\n"
+            advice_text += "• Avval kirim va chiqimlaringizni kiritib bosing\n"
+            advice_text += "• AI sizga shaxsiy byudjet tavsiyalari beradi\n"
+            advice_text += "• Tejash imkoniyatlarini topadi\n"
         else:
-            savings_rate = ((month_income - month_expense) / month_income) * 100 if month_income > 0 else 0
+            savings_rate = (month_balance / month_income * 100) if month_income > 0 else 0
             
-            if savings_rate >= 20:
-                status = "✅ Ajoyib! Siz yaxshi tejayapsiz."
-            elif savings_rate >= 10:
-                status = "👍 Yaxshi! Tejash darajangiz yaxshi."
-            elif savings_rate >= 0:
-                status = "⚠️ Ehtiyot! Xarajatlaringizni kamaytiring."
-            else:
-                status = "❌ Xavfli! Daromadlaringizdan ko'p xarajat qilyapsiz."
+            advice_text += f"📊 <b>Bu oy statistikasi:</b>\n"
+            advice_text += f"💰 Kirim: {format_amount(month_income, user_id)}\n"
+            advice_text += f"💸 Chiqim: {format_amount(month_expense, user_id)}\n"
+            advice_text += f"💵 Balans: {format_amount(month_balance, user_id)}\n"
+            advice_text += f"📈 Tejash: {savings_rate:.1f}%\n\n"
             
-            advice = f"""💰 <b>AI Byudjet Tavsiyasi:</b>
-
-📊 <b>Oylik hisobot:</b>
-• Daromad: {format_amount(month_income, user_id)}
-• Xarajat: {format_amount(month_expense, user_id)}
-• Tejash: {format_amount(month_income - month_expense, user_id)}
-• Tejash foizi: {savings_rate:.1f}%
-
-{status}
-
-💡 <b>Tavsiyalar:</b>"""
+            # Category analysis
+            if categories:
+                advice_text += "🏷️ <b>Xarajatlar tuzilishi:</b>\n"
+                for category, amount in categories[:5]:
+                    percentage = (amount / month_expense * 100) if month_expense > 0 else 0
+                    advice_text += f"• {category}: {format_amount(amount, user_id)} ({percentage:.1f}%)\n"
+                advice_text += "\n"
+            
+            # AI recommendations
+            advice_text += "🧠 <b>AI TAVSIYALARI:</b>\n"
             
             if savings_rate < 10:
-                advice += "\n• Xarajatlaringizni 20% kamaytiring"
-                advice += "\n• Ortiqcha xarajatlarni aniqlang"
-                advice += "\n• Daromadlaringizni oshiring"
+                advice_text += "⚠️ Tejashingiz juda kam. Quyidagilarni ko'rib chiqing:\n"
+                advice_text += "• Ortiqcha xarajatlarni kamaytiring\n"
+                advice_text += "• Daromadlarni oshirish imkoniyatlarini qidiring\n"
+                advice_text += "• Byudjet rejangizni qayta ko'rib chiqing\n"
+            elif savings_rate < 30:
+                advice_text += "✅ Tejashingiz yaxshi. Davom eting:\n"
+                advice_text += "• Mavjud tejash darajasini saqlang\n"
+                advice_text += "• Qo'shimcha tejash imkoniyatlarini qidiring\n"
+                advice_text += "• Investitsiya imkoniyatlarini ko'rib chiqing\n"
             else:
-                advice += "\n• Yaxshi ishlayapsiz!"
-                advice += "\n• Investitsiya qilishni o'ylang"
-                advice += "\n• Zaxira pul yig'ing"
+                advice_text += "🎉 Ajoyib! Siz juda yaxshi tejayapsiz:\n"
+                advice_text += "• Mavjud darajani saqlang\n"
+                advice_text += "• Investitsiya imkoniyatlarini ko'rib chiqing\n"
+                advice_text += "• Moliyaviy maqsadlaringizni oshiring\n"
         
-        if loading_msg:
-            await loading_msg.edit_text(advice, parse_mode=ParseMode.HTML)
-            
+        # Add navigation buttons
+        keyboard = [
+            ["🧠 AI Maslahat", "📊 AI Tahlil"],
+            ["🔙 Orqaga", "🏠 Bosh menyu"]
+        ]
+        
+        if update.message:
+            await update.message.reply_text(
+                advice_text,
+                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+                parse_mode="HTML"
+            )
+        
     except Exception as e:
         logger.exception(f"Budget advice error: {e}")
-        if loading_msg:
-            await loading_msg.edit_text(MESSAGES["uz"]["ai_error"])
+        if update.message:
+            await update.message.reply_text("❌ Byudjet tavsiyasini olishda xatolik.")
 
 async def show_savings_tips(update: Update, user_id: int):
-    """Show AI savings tips"""
-    loading_msg = None
+    """Show AI savings tips with improved error handling"""
     try:
+        from constants import MESSAGES
+        from utils import get_user_language
+        
+        language = get_user_language(user_id)
+        
+        # Show loading message
         if update.message:
             loading_msg = await update.message.reply_text(MESSAGES["uz"]["loading"])
         
-        # Get user spending patterns
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
+        # Generate savings tips
+        tips_text = "💡 <b>AI TEJASH MASLAHATLARI</b>\n\n"
         
-        c.execute("""
-            SELECT category, SUM(amount) 
-            FROM transactions 
-            WHERE user_id = ? AND type = 'expense' 
-            GROUP BY category 
-            ORDER BY SUM(amount) DESC 
-            LIMIT 5
-        """, (user_id,))
-        top_categories = c.fetchall()
-        conn.close()
+        tips_text += "🎯 <b>Asosiy tamoyillar:</b>\n"
+        tips_text += "• 50/30/20 qoidasi: 50% xarajatlar, 30% xohishlar, 20% tejash\n"
+        tips_text += "• Avtomatik tejash: har oy ma'lum miqdorni ajrating\n"
+        tips_text += "• Zavod qoidasi: har xarajatdan 10% tejash\n\n"
         
-        tips = f"""💎 <b>AI Tejash Maslahatlari:</b>
-
-🎯 <b>Asosiy tavsiyalar:</b>
-• Xarajatlaringizni kuzatib boring
-• Ortiqcha xarajatlarni kamaytiring
-• Daromadlaringizni oshiring
-• Zaxira pul yig'ing
-
-📊 <b>Eng ko'p xarajat qiladigan kategoriyalar:</b>"""
-
-        for i, (category, amount) in enumerate(top_categories, 1):
-            tips += f"\n{i}. {category}: {format_amount(amount, user_id)}"
+        tips_text += "💰 <b>Amaliy maslahatlar:</b>\n"
+        tips_text += "• Kunlik xarajatlarni kuzatib boring\n"
+        tips_text += "• Ortiqcha xarajatlarni aniqlang va kamaytiring\n"
+        tips_text += "• Uy xarajatlarini optimallashtiring\n"
+        tips_text += "• Transport xarajatlarini kamaytiring\n"
+        tips_text += "• Oziq-ovqat xarajatlarini optimallashtiring\n\n"
         
-        tips += """
-
-💡 <b>Tejash usullari:</b>
-• 50/30/20 qoidasi: 50% - asosiy xarajatlar, 30% - xohishlar, 20% - tejash
-• Avtomatik tejash o'rnating
-• Ortiqcha xarajatlarni aniqlang
-• Daromadlaringizni diversifikatsiya qiling
-
-🎯 <b>Maqsadlar:</b>
-• Oylik daromadlaringizning 20%ini tejang
-• 3-6 oylik xarajatlaringiz miqdorida zaxira pul yig'ing
-• Uzoq muddatli maqsadlar uchun alohida hisob oching"""
-
-        if loading_msg:
-            await loading_msg.edit_text(tips, parse_mode=ParseMode.HTML)
-            
+        tips_text += "📱 <b>Zamonaviy usullar:</b>\n"
+        tips_text += "• Tejash ilovalaridan foydalaning\n"
+        tips_text += "• Karta cashback imkoniyatlaridan foydalaning\n"
+        tips_text += "• Online xarid qilganda chegirmalarni qidiring\n"
+        tips_text += "• Ortiqcha obunalarni bekor qiling\n\n"
+        
+        tips_text += "🎯 <b>Uzoq muddatli reja:</b>\n"
+        tips_text += "• Favqulodda vaziyatlar uchun 3-6 oylik zaxira\n"
+        tips_text += "• Pensiya uchun alohida tejash\n"
+        tips_text += "• Investitsiya imkoniyatlarini ko'rib chiqing\n"
+        
+        # Add navigation buttons
+        keyboard = [
+            ["💰 AI Byudjet", "🧠 AI Maslahat"],
+            ["🔙 Orqaga", "🏠 Bosh menyu"]
+        ]
+        
+        if update.message:
+            await update.message.reply_text(
+                tips_text,
+                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+                parse_mode="HTML"
+            )
+        
     except Exception as e:
         logger.exception(f"Savings tips error: {e}")
-        if loading_msg:
-            await loading_msg.edit_text(MESSAGES["uz"]["ai_error"])
+        if update.message:
+            await update.message.reply_text("❌ Tejash maslahatlarini olishda xatolik.")
 
 async def show_investment_advice(update: Update, user_id: int):
     """Show AI investment advice"""

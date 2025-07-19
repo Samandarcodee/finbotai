@@ -12,8 +12,11 @@ EXPENSE_AMOUNT, EXPENSE_NOTE = 201, 202
 MESSAGES = {
     "uz": {
         "main_menu": "🏠 Bosh menyu",
+        "main_menu_text": "🏠 <b>FinBot AI - Bosh menyu</b>\n\nQuyidagi funksiyalardan birini tanlang:\n\n💰 <b>Kirim/Chiqim</b> - Daromad va xarajatlarni kiritish\n📊 <b>Balans/Tahlil</b> - Moliyaviy holatni ko'rish\n🤖 <b>AI vositalar</b> - Aqlliroq moliyaviy maslahatlar\n⚙️ <b>Sozlamalar/Yordam</b> - Bot sozlamalari va yordam",
         "invalid_choice": "❌ Noto'g'ri tanlov. Qaytadan tanlang.",
         "error_soft": "🤖 Xatolik yuz berdi, lekin qo'rqmang, jamoamiz bu haqida xabardor.",
+        "loading": "🧠 AI hisob-kitob qilmoqda...",
+        "ai_error": "❌ AI xizmatida xatolik. Qaytadan urinib ko'ring.",
         "welcome": "👋 Assalomu alaykum, {name}!\n\n💡 Moliyaviy kelajagingizni o'zingiz nazorat qilmoqchimisiz?\nMen bu yo'lda sizga yordam beruvchi FinBot AI 🤖man.\n\n✅ Har bir so'mingizni to'g'ri boshqarish\n✅ Tejash imkoniyatlarini topish\n✅ Moliyaviy erkinlik sari odimlash – men bilan birga bo'ladi.\n\n🎯 Boshlang'ich sozlash (2-4 bosqich):\n1️⃣ Tilni tanlash (majburiy)\n2️⃣ Valyutani tanlash (majburiy)\n3️⃣ Oylik daromadingizni kiritish (ixtiyoriy)\n4️⃣ Tejash maqsadingizni qo'yish (ixtiyoriy)\n\n⚡️ Barchasi atigi 2 daqiqa vaqt oladi.",
         "language_select": "1️⃣ Tilni tanlang:",
         "currency_select": "2️⃣ Valyutani tanlang:",
@@ -31,8 +34,11 @@ MESSAGES = {
     },
     "ru": {
         "main_menu": "🏠 Главное меню",
+        "main_menu_text": "🏠 <b>FinBot AI - Главное меню</b>\n\nВыберите одну из функций:\n\n💰 <b>Доходы/Расходы</b> - Ввод доходов и расходов\n📊 <b>Баланс/Анализ</b> - Просмотр финансового состояния\n🤖 <b>AI инструменты</b> - Умные финансовые советы\n⚙️ <b>Настройки/Помощь</b> - Настройки бота и помощь",
         "invalid_choice": "❌ Неправильный выбор. Выберите снова.",
         "error_soft": "🤖 Произошла ошибка, но не волнуйтесь, наша команда в курсе.",
+        "loading": "🧠 AI вычисляет...",
+        "ai_error": "❌ Ошибка в AI сервисе. Попробуйте снова.",
         "welcome": "👋 Здравствуйте, {name}!\n\n💡 Хотите контролировать свое финансовое будущее?\nЯ FinBot AI, который поможет вам в этом 🤖\n\n✅ Правильно управлять каждой копейкой\n✅ Находить возможности для экономии\n✅ Двигаться к финансовой свободе – вместе со мной.\n\n🎯 Начальная настройка (2-4 этапа):\n1️⃣ Выбор языка (обязательно)\n2️⃣ Выбор валюты (обязательно)\n3️⃣ Ввод месячного дохода (по желанию)\n4️⃣ Постановка цели экономии (по желанию)\n\n⚡️ Все займет всего 2 минуты.",
         "language_select": "1️⃣ Выберите язык:",
         "currency_select": "2️⃣ Выберите валюту:",
@@ -50,8 +56,11 @@ MESSAGES = {
     },
     "en": {
         "main_menu": "🏠 Main Menu",
+        "main_menu_text": "🏠 <b>FinBot AI - Main Menu</b>\n\nSelect one of the functions:\n\n💰 <b>Income/Expense</b> - Enter income and expenses\n📊 <b>Balance/Analysis</b> - View financial status\n🤖 <b>AI Tools</b> - Smart financial advice\n⚙️ <b>Settings/Help</b> - Bot settings and help",
         "invalid_choice": "❌ Invalid choice. Please select again.",
         "error_soft": "🤖 An error occurred, but don't worry, our team is aware.",
+        "loading": "🧠 AI is calculating...",
+        "ai_error": "❌ Error in AI service. Please try again.",
         "welcome": "👋 Hello, {name}!\n\n💡 Want to control your financial future?\nI'm FinBot AI who will help you with this 🤖\n\n✅ Manage every penny correctly\n✅ Find savings opportunities\n✅ Move towards financial freedom – together with me.\n\n🎯 Initial setup (2-4 steps):\n1️⃣ Language selection (required)\n2️⃣ Currency selection (required)\n3️⃣ Enter your monthly income (optional)\n4️⃣ Set your savings goal (optional)\n\n⚡️ Everything takes just 2 minutes.",
         "language_select": "1️⃣ Select language:",
         "currency_select": "2️⃣ Select currency:",

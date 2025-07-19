@@ -40,7 +40,11 @@ async def show_balance(update: Update, user_id: int):
     """Show user balance with improved formatting and emoji sections"""
     try:
         settings = get_user_settings(user_id)
-        currency = settings['currency']
+        if not settings:
+            await update.message.reply_text("❌ Foydalanuvchi sozlamalari topilmadi.")
+            return
+            
+        currency = settings.get('currency', 'UZS')
         
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
@@ -82,12 +86,27 @@ async def show_balance(update: Update, user_id: int):
             f"💵 Balans: {format_amount(total_balance, user_id)}\n\n"
             f"💡 <b>Maslahat:</b> {get_balance_advice(total_balance, month_balance)}"
         )
+        
+        # Add navigation buttons
+        keyboard = [
+            ["📈 Tahlil", "📊 Kategoriyalar"],
+            ["🔙 Orqaga", "🏠 Bosh menyu"]
+        ]
+        
         if update.message:
-            await update.message.reply_text(balance_text, parse_mode=ParseMode.HTML)
+            await update.message.reply_text(
+                balance_text, 
+                parse_mode=ParseMode.HTML,
+                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+            )
     except sqlite3.Error as e:
         logger.exception(f"Balance error: {e}")
         if update.message:
             await update.message.reply_text("❌ Balansni ko'rishda xatolik. Qaytadan urinib ko'ring.")
+    except Exception as e:
+        logger.exception(f"Unexpected error in show_balance: {e}")
+        if update.message:
+            await update.message.reply_text("❌ Kutilmagan xatolik yuz berdi.")
 
 def get_balance_advice(total_balance, month_balance):
     """Get personalized balance advice"""
@@ -104,7 +123,11 @@ async def show_analysis(update: Update, user_id: int):
     """Show transaction analysis with improved formatting"""
     try:
         settings = get_user_settings(user_id)
-        currency = settings['currency']
+        if not settings:
+            await update.message.reply_text("❌ Foydalanuvchi sozlamalari topilmadi.")
+            return
+            
+        currency = settings.get('currency', 'UZS')
         
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
@@ -133,17 +156,23 @@ async def show_analysis(update: Update, user_id: int):
         conn.close()
         
         if not transactions:
+            keyboard = [
+                ["💰 Kirim qo'shish", "💸 Chiqim qo'shish"],
+                ["🔙 Orqaga", "🏠 Bosh menyu"]
+            ]
             if update.message:
                 await update.message.reply_text(
-                    "📈 TAHLIL\n\n"
-                    "Hali tranzaksiyalar yo'q. Avval kirim yoki chiqim qo'shing!"
+                    "📈 <b>TAHLIL</b>\n\n"
+                    "Hali tranzaksiyalar yo'q. Avval kirim yoki chiqim qo'shing!",
+                    parse_mode=ParseMode.HTML,
+                    reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
                 )
             return
         
-        analysis_text = "📈 TAHLIL HISOBOTI\n\n"
+        analysis_text = "📈 <b>TAHLIL HISOBOTI</b>\n\n"
         
         # Recent transactions
-        analysis_text += "🕐 Oxirgi tranzaksiyalar:\n"
+        analysis_text += "🕐 <b>Oxirgi tranzaksiyalar:</b>\n"
         for t in transactions[:5]:
             emoji = "💰" if t[0] == "income" else "💸"
             # Safe date parsing
@@ -156,17 +185,31 @@ async def show_analysis(update: Update, user_id: int):
         
         # Category analysis
         if categories:
-            analysis_text += "\n Eng ko'p xarajat qilgan kategoriyalar:\n"
+            analysis_text += "\n🏷️ <b>Eng ko'p xarajat qilgan kategoriyalar:</b>\n"
             for cat, count, total in categories:
-                analysis_text += f"🏷️ {cat}: {format_amount(total, user_id)} ({count} ta)\n"
+                analysis_text += f"• {cat}: {format_amount(total, user_id)} ({count} ta)\n"
+        
+        # Add navigation buttons
+        keyboard = [
+            ["📊 Balans", "📊 Kategoriyalar"],
+            ["🔙 Orqaga", "🏠 Bosh menyu"]
+        ]
         
         if update.message:
-            await update.message.reply_text(analysis_text)
+            await update.message.reply_text(
+                analysis_text,
+                parse_mode=ParseMode.HTML,
+                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+            )
         
     except sqlite3.Error as e:
         logger.exception(f"Analysis error: {e}")
         if update.message:
             await update.message.reply_text("❌ Tahlilni ko'rishda xatolik. Qaytadan urinib ko'ring.")
+    except Exception as e:
+        logger.exception(f"Unexpected error in show_analysis: {e}")
+        if update.message:
+            await update.message.reply_text("❌ Kutilmagan xatolik yuz berdi.")
 
 async def add_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Add income transaction"""

@@ -294,22 +294,49 @@ async def complete_onboarding(update: Update, user_id: int, context: ContextType
         await update.message.reply_text("❌ Onboarding yakunlashda xatolik.")
 
 async def show_main_menu(update):
-    """Show main menu"""
+    """Show main menu with improved UI and navigation"""
     if not update.message:
-        return
+        return ConversationHandler.END
     
     user_id = getattr(update.message.from_user, 'id', None)
     if user_id is None:
-        return
+        return ConversationHandler.END
     
-    # Get keyboard in user's language
-    from constants import get_keyboard
-    keyboard = get_keyboard(user_id)
-    
-    await update.message.reply_text(
-        "🏠 Asosiy menyu:",
-        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    )
+    try:
+        from constants import get_keyboard, get_message
+        
+        # Get user's language and create appropriate keyboard
+        keyboard = get_keyboard(user_id)
+        
+        # Create main menu text
+        menu_text = get_message("main_menu_text", user_id)
+        if not menu_text:
+            menu_text = (
+                "🏠 <b>FinBot AI - Bosh menyu</b>\n\n"
+                "Quyidagi funksiyalardan birini tanlang:\n\n"
+                "💰 <b>Kirim/Chiqim</b> - Daromad va xarajatlarni kiritish\n"
+                "📊 <b>Balans/Tahlil</b> - Moliyaviy holatni ko'rish\n"
+                "🤖 <b>AI vositalar</b> - Aqlliroq moliyaviy maslahatlar\n"
+                "⚙️ <b>Sozlamalar/Yordam</b> - Bot sozlamalari va yordam"
+            )
+        
+        # Send main menu with keyboard
+        await update.message.reply_text(
+            menu_text,
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard,
+                resize_keyboard=True,
+                one_time_keyboard=False
+            ),
+            parse_mode="HTML"
+        )
+        
+        return ConversationHandler.END
+        
+    except Exception as e:
+        logger.exception(f"Error in show_main_menu: {e}")
+        await update.message.reply_text("❌ Xatolik yuz berdi. Qaytadan urinib ko'ring.")
+        return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Cancel conversation"""
