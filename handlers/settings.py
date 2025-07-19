@@ -369,8 +369,11 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
     
     # DB ga saqlash
     try:
+        logger.info(f"Starting language change for user {user_id} to {language}")
+        
         conn = get_db_connection()
         if conn is None:
+            logger.error(f"Database connection failed for user {user_id}")
             reply_markup = build_reply_keyboard([
                 ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"],
                 ["🔙 Orqaga", "🏠 Bosh menyu"]
@@ -382,16 +385,20 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
             return SETTINGS_LANGUAGE
         
         c = conn.cursor()
+        logger.info(f"Database connection successful for user {user_id}")
         
         # Check if user exists in user_settings
         c.execute("SELECT user_id FROM user_settings WHERE user_id = ?", (user_id,))
         user_exists = c.fetchone()
+        logger.info(f"User exists check: {user_exists is not None}")
         
         if user_exists:
             # Update existing user settings
+            logger.info(f"Updating existing user settings for user {user_id}")
             c.execute("UPDATE user_settings SET language = ? WHERE user_id = ?", (language, user_id))
         else:
             # Create new user settings record
+            logger.info(f"Creating new user settings for user {user_id}")
             c.execute("""
                 INSERT INTO user_settings (user_id, language, currency, notifications, auto_reports) 
                 VALUES (?, ?, 'UZS', 1, 0)
@@ -399,6 +406,7 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
         
         conn.commit()
         conn.close()
+        logger.info(f"Language change successful for user {user_id}")
         
         # Yangi tilda xabar yuborish
         from constants import MESSAGES
@@ -409,7 +417,7 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
         return await show_main_menu(update, context)
         
     except Exception as e:
-        logger.exception(f"Language change error: {e}")
+        logger.exception(f"Language change error for user {user_id}: {e}")
         reply_markup = build_reply_keyboard([
             ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"],
             ["🔙 Orqaga", "🏠 Bosh menyu"]
