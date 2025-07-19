@@ -220,11 +220,9 @@ async def message_handler(update, context):
     elif text == "📊 AI Tahlil":
         return await show_ai_analysis(update, user_id)
     elif text == "🤖 AI Byudjet":
-        await update.message.reply_text("AI byudjet funksiyasi uchun /ai_byudjet buyrug'ini yuboring.")
-        return ConversationHandler.END
+        return await ai_budget_start(update, context)
     elif text == "🎯 AI Maqsad":
-        await update.message.reply_text("AI maqsad funksiyasi uchun /ai_maqsad buyrug'ini yuboring.")
-        return ConversationHandler.END
+        return await ai_goal_start(update, context)
     # Sozlamalar/Yordam
     elif text == "⚙️ Sozlamalar":
         return await show_settings(update, user_id)
@@ -450,12 +448,44 @@ def main():
         fallbacks=[CommandHandler("cancel", cancel)]
     )
 
-    # Main conversation handler
+    # Main conversation handler - commented out to avoid conflicts
+    # main_conv_handler = ConversationHandler(
+    #     entry_points=[MessageHandler(
+    #         filters.Regex(r"^(💰 Kirim/Chiqim|📊 Balans/Tahlil|🤖 AI vositalar|⚙️ Sozlamalar/Yordam)$"),
+    #         message_handler
+    #     )],
+    #     states={
+    #         INCOME_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, income_amount)],
+    #         INCOME_NOTE: [MessageHandler(filters.TEXT & ~filters.COMMAND, income_note)],
+    #         EXPENSE_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, expense_amount)],
+    #         EXPENSE_NOTE: [MessageHandler(filters.TEXT & ~filters.COMMAND, expense_note)],
+    #         3: [MessageHandler(filters.TEXT & ~filters.COMMAND, expense_category_selected)],
+    #         4: [MessageHandler(filters.TEXT & ~filters.COMMAND, income_category_selected)],
+    #         5: [MessageHandler(filters.TEXT & ~filters.COMMAND, settings_handler)],
+    #         6: [MessageHandler(filters.TEXT & ~filters.COMMAND, currency_selection_handler)],
+    #         7: [MessageHandler(filters.TEXT & ~filters.COMMAND, delete_data_handler)],
+    #         9: [MessageHandler(filters.TEXT & ~filters.COMMAND, currency_selection_handler)],
+    #     },
+    #     fallbacks=[CommandHandler("cancel", cancel)]
+    # )
+
+    # Add all handlers
+    app.add_handler(support_conv_handler)
+    app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("cancel", cancel))
+    app.add_handler(MessageHandler(filters.Regex("^/reply_"), admin_reply))
+    app.add_handler(CommandHandler("stat", show_stats))
+    app.add_handler(push_conv_handler)
+    app.add_handler(ai_budget_conv_handler)
+    app.add_handler(ai_goal_conv_handler)
+    app.add_handler(CallbackQueryHandler(inline_button_handler))
+    app.add_handler(onboarding_conv_handler)
+    app.add_handler(CommandHandler("history", show_history))
+    app.add_handler(CommandHandler("admin_panel", admin_panel))
+    
+    # Main conversation handler for all text messages
     main_conv_handler = ConversationHandler(
-        entry_points=[MessageHandler(
-            filters.Regex(r"^(💰 Kirim/Chiqim|📊 Balans/Tahlil|🤖 AI vositalar|⚙️ Sozlamalar/Yordam)$"),
-            message_handler
-        )],
+        entry_points=[MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler)],
         states={
             INCOME_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, income_amount)],
             INCOME_NOTE: [MessageHandler(filters.TEXT & ~filters.COMMAND, income_note)],
@@ -470,24 +500,13 @@ def main():
         },
         fallbacks=[CommandHandler("cancel", cancel)]
     )
-
-    # Add all handlers
-    app.add_handler(support_conv_handler)
-    app.add_handler(main_conv_handler)
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("cancel", cancel))
-    app.add_handler(MessageHandler(filters.Regex("^/reply_"), admin_reply))
-    app.add_handler(CommandHandler("stat", show_stats))
-    app.add_handler(push_conv_handler)
-    app.add_handler(ai_budget_conv_handler)
-    app.add_handler(ai_goal_conv_handler)
-    app.add_handler(CallbackQueryHandler(inline_button_handler))
-    app.add_handler(onboarding_conv_handler)
-    app.add_handler(CommandHandler("history", show_history))
-    app.add_handler(CommandHandler("admin_panel", admin_panel))
     
-    # Add message handler for all text messages
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
+    app.add_handler(main_conv_handler)
+    
+    # Add AI and Budget conversation handlers
+    app.add_handler(ai_goal_conv_handler)
+    app.add_handler(ai_budget_conv_handler)
+    app.add_handler(push_conv_handler)
 
     # Setup schedulers
     setup_schedulers(app)
