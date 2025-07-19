@@ -91,10 +91,17 @@ async def show_settings(update, context):
     """Show settings menu with improved navigation"""
     try:
         from constants import MESSAGES
-        settings = get_user_settings(getattr(getattr(update.message, 'from_user', None), 'id', None))
+        user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+        if not user_id:
+            await update.message.reply_text(MESSAGES["uz"]["user_not_found"])
+            return ConversationHandler.END
+            
+        # Get fresh settings from database
+        settings = get_user_settings(user_id)
         if not settings:
             await update.message.reply_text(MESSAGES["uz"]["user_not_found"])
             return ConversationHandler.END
+            
         currency = settings.get('currency', 'UZS')
         language = settings.get('language', 'uz')
         notifications = settings.get('notifications', True)
@@ -122,7 +129,7 @@ async def show_settings(update, context):
                 reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False),
                 parse_mode=ParseMode.HTML
             )
-            return 5  # Return the main settings menu state
+            return SETTINGS_MENU  # Return the correct state
     except Exception as e:
         logger.exception(f"Settings error: {e}")
         if update.message:
