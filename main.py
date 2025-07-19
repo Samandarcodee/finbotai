@@ -62,6 +62,13 @@ ASK_SUPPORT = 100
 INCOME_AMOUNT, INCOME_NOTE = 101, 102
 EXPENSE_AMOUNT, EXPENSE_NOTE = 201, 202
 
+# Currency symbols
+CURRENCY_SYMBOLS = {
+    "UZS": "so'm",
+    "RUB": "₽",
+    "USD": "$"
+}
+
 # MESSAGES constant
 MESSAGES = {
     "uz": {
@@ -168,6 +175,42 @@ def get_keyboard(user_id=None):
     """Get keyboard in user's language"""
     language = get_user_language(user_id) if user_id else "uz"
     return MAIN_MODULES_KEYBOARD.get(language, MAIN_MODULES_KEYBOARD["uz"])
+
+def get_user_currency(user_id):
+    """Get user currency from database"""
+    try:
+        from db import get_db_connection
+        conn = get_db_connection()
+        if conn is None:
+            return "UZS"  # Default to Uzbek som
+        
+        c = conn.cursor()
+        c.execute("SELECT currency FROM user_settings WHERE user_id = ?", (user_id,))
+        row = c.fetchone()
+        conn.close()
+        
+        if row and row[0]:
+            return row[0]
+        return "UZS"  # Default to Uzbek som
+    except Exception:
+        return "UZS"  # Default to Uzbek som
+
+def format_amount(amount, user_id):
+    """Format amount with user's currency symbol"""
+    currency = get_user_currency(user_id)
+    symbol = CURRENCY_SYMBOLS.get(currency, "so'm")
+    
+    # Format number with spaces for thousands
+    formatted_amount = "{:,}".format(amount).replace(",", " ")
+    
+    if currency == "UZS":
+        return f"{formatted_amount} {symbol}"
+    elif currency == "RUB":
+        return f"{formatted_amount} {symbol}"
+    elif currency == "USD":
+        return f"{symbol}{formatted_amount}"
+    else:
+        return f"{formatted_amount} {symbol}"
 
 async def help_command(update, context):
     """Help command handler"""

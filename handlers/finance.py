@@ -8,7 +8,8 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 from telegram.constants import ParseMode
 from datetime import datetime
-from db import get_db_connection, get_user_settings, format_currency, validate_amount, DB_PATH
+from db import get_db_connection, get_user_settings, validate_amount, DB_PATH
+from main import format_amount
 from loguru import logger
 
 # State constants
@@ -72,13 +73,13 @@ async def show_balance(update: Update, user_id: int):
         balance_text = (
             "📊 <b>BALANS HISOBOTI</b>\n\n"
             "🗓️ <b>Bu oy:</b>\n"
-            f"💰 Kirim: {format_currency(month_income, currency)}\n"
-            f"💸 Chiqim: {format_currency(month_expense, currency)}\n"
-            f"💵 Balans: {format_currency(month_balance, currency)}\n\n"
+            f"💰 Kirim: {format_amount(month_income, user_id)}\n"
+            f"💸 Chiqim: {format_amount(month_expense, user_id)}\n"
+            f"💵 Balans: {format_amount(month_balance, user_id)}\n\n"
             "📈 <b>Jami:</b>\n"
-            f"💰 Kirim: {format_currency(total_income, currency)}\n"
-            f"💸 Chiqim: {format_currency(total_expense, currency)}\n"
-            f"💵 Balans: {format_currency(total_balance, currency)}\n\n"
+            f"💰 Kirim: {format_amount(total_income, user_id)}\n"
+            f"💸 Chiqim: {format_amount(total_expense, user_id)}\n"
+            f"💵 Balans: {format_amount(total_balance, user_id)}\n\n"
             f"💡 <b>Maslahat:</b> {get_balance_advice(total_balance, month_balance)}"
         )
         if update.message:
@@ -151,13 +152,13 @@ async def show_analysis(update: Update, user_id: int):
                 date_str = date_obj.strftime("%d.%m")
             except (ValueError, TypeError):
                 date_str = "N/A"
-            analysis_text += f"{emoji} {date_str} - {format_currency(t[1], currency)} - {t[2]}\n"
+            analysis_text += f"{emoji} {date_str} - {format_amount(t[1], user_id)} - {t[2]}\n"
         
         # Category analysis
         if categories:
             analysis_text += "\n Eng ko'p xarajat qilgan kategoriyalar:\n"
             for cat, count, total in categories:
-                analysis_text += f"🏷️ {cat}: {format_currency(total, currency)} ({count} ta)\n"
+                analysis_text += f"🏷️ {cat}: {format_amount(total, user_id)} ({count} ta)\n"
         
         if update.message:
             await update.message.reply_text(analysis_text)
@@ -203,7 +204,7 @@ async def add_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         success_text = f"""✅ KIRIM QO'SHILDI!
 
-💰 Miqdor: {format_currency(amount, currency)}
+💰 Miqdor: {format_amount(amount, user_id)}
 📂 Kategoriya: {selected_category}
 📝 Izoh: {note}
 📅 Sana: {datetime.now().strftime('%d.%m.%Y %H:%M')}
@@ -285,11 +286,9 @@ async def income_note(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.commit()
         conn.close()
         
-        settings = get_user_settings(user_id)
-        currency = settings['currency']
         success_text = f"""✅ KIRIM QO'SHILDI!
 
-💰 Miqdor: {format_currency(amount, currency)}
+💰 Miqdor: {format_amount(amount, user_id)}
 📂 Kategoriya: {selected_category}
 📝 Izoh: {note}
 📅 Sana: {datetime.now().strftime('%d.%m.%Y %H:%M')}
@@ -373,11 +372,9 @@ async def expense_note(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.commit()
         conn.close()
         
-        settings = get_user_settings(user_id)
-        currency = settings['currency']
         success_text = f"""✅ CHIQIM QO'SHILDI!
 
-💸 Miqdor: {format_currency(amount, currency)}
+💸 Miqdor: {format_amount(amount, user_id)}
 📂 Kategoriya: {selected_category}
 📝 Izoh: {note}
 📅 Sana: {datetime.now().strftime('%d.%m.%Y %H:%M')}
@@ -422,7 +419,7 @@ async def show_categories(update: Update, user_id: int):
         for cat, count, total in categories:
             percentage = (total / total_expense * 100) if total_expense > 0 else 0
             text += f"🏷️ {cat}:\n"
-            text += f"   💰 {format_currency(total, currency)}\n"
+            text += f"   💰 {format_amount(total, user_id)}\n"
             text += f"   📊 {percentage:.1f}% xarajat\n\n"
         
         if update.message:
@@ -470,7 +467,7 @@ async def show_budget_status(update: Update, user_id: int):
                 status = "🟡"
             else:
                 status = "🔴"
-            text += f"{status} <b>{category}</b>\nByudjet: {format_currency(budget_amount, currency)}\nSarflangan: {format_currency(spent, currency)} ({percentage:.1f}%)\nQolgan: {format_currency(remaining, currency)}\n\n"
+            text += f"{status} <b>{category}</b>\nByudjet: {format_amount(budget_amount, user_id)}\nSarflangan: {format_amount(spent, user_id)} ({percentage:.1f}%)\nQolgan: {format_amount(remaining, user_id)}\n\n"
         if update.message:
             await update.message.reply_text(text, parse_mode=ParseMode.HTML)
     except sqlite3.Error as e:
@@ -517,7 +514,7 @@ async def export_data(update: Update, user_id: int):
                 date_str = date_obj.strftime("%d.%m.%Y %H:%M")
             except (ValueError, TypeError):
                 date_str = "N/A"
-            export_text += f"{emoji} {date_str} - {format_currency(t[1], currency)} - {t[2]} ({t[3]})\n"
+            export_text += f"{emoji} {date_str} - {format_amount(t[1], user_id)} - {t[2]} ({t[3]})\n"
         
         if update.message:
             await update.message.reply_text(export_text)
@@ -574,11 +571,11 @@ async def show_records(update: Update, user_id: int):
         text = "🏆 REKORDLARINGIZ:\n\n"
         
         if max_income and max_income[0]:
-            text += f"💰 Eng katta kirim: {format_currency(max_income[0], currency)}\n"
+            text += f"💰 Eng katta kirim: {format_amount(max_income[0], user_id)}\n"
             text += f"   📝 {max_income[1]}\n\n"
         
         if max_expense and max_expense[0]:
-            text += f"💸 Eng katta chiqim: {format_currency(max_expense[0], currency)}\n"
+            text += f"💸 Eng katta chiqim: {format_amount(max_expense[0], user_id)}\n"
             text += f"   📝 {max_expense[1]}\n\n"
         
         if active_day and active_day[1]:
@@ -590,7 +587,7 @@ async def show_records(update: Update, user_id: int):
             text += f"📅 Eng faol kun: {date_str} ({active_day[1]} ta tranzaksiya)\n\n"
         
         text += f"📊 Jami tranzaksiyalar: {total_transactions} ta\n"
-        text += f"📈 O'rtacha oylik xarajat: {format_currency(int(avg_monthly), currency)}"
+        text += f"📈 O'rtacha oylik xarajat: {format_amount(int(avg_monthly), user_id)}"
         
         if update.message:
             await update.message.reply_text(text)

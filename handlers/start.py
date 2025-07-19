@@ -189,6 +189,11 @@ async def onboarding_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     
     text = update.message.text
+    user_id = getattr(update.message.from_user, 'id', None)
+    
+    if user_id is None:
+        await update.message.reply_text("❌ Foydalanuvchi ma'lumotlari topilmadi.")
+        return ConversationHandler.END
     
     # Check if user wants to skip
     from main import get_message
@@ -210,11 +215,11 @@ async def onboarding_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if income <= 0:
             raise ValueError
     except ValueError:
+        error_text = get_message("error_format", user_id)
         await update.message.reply_text(
-            "❌ Noto'g'ri format! Masalan: 3 000 000 yoki 5000000.\n\n"
-            "Yoki ⏭ O'tkazib yuborish tugmasini bosing.",
+            error_text,
             reply_markup=ReplyKeyboardMarkup([
-                ["⏭ O'tkazib yuborish"]
+                [skip_option]
             ], resize_keyboard=True, one_time_keyboard=True)
         )
         return ONBOARDING_INCOME
@@ -222,12 +227,11 @@ async def onboarding_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Save income to context
     context.user_data['onboarding_income'] = income
     
+    goal_text = get_message("goal_input", user_id)
     await update.message.reply_text(
-        "4️⃣ Maqsad qo'yish yoki o'tkazib yuboring:\n\n"
-        "💡 Maqsad qo'yganingizda AI monitoring yordam beradi\n"
-        "Masalan: iPhone 15 Pro, o'qish, safar",
+        goal_text,
         reply_markup=ReplyKeyboardMarkup([
-            ["⏭ O'tkazib yuborish"]
+            [skip_option]
         ], resize_keyboard=True, one_time_keyboard=True)
     )
     return ONBOARDING_GOAL
