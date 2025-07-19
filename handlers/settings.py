@@ -85,11 +85,11 @@ MESSAGES = {
     }
 }
 
-async def show_settings(update: Update, user_id: int):
+async def show_settings(update, context):
     """Show settings menu with improved navigation"""
     try:
         from constants import MESSAGES
-        settings = get_user_settings(user_id)
+        settings = get_user_settings(getattr(getattr(update.message, 'from_user', None), 'id', None))
         if not settings:
             await update.message.reply_text(MESSAGES["uz"]["user_not_found"])
             return ConversationHandler.END
@@ -126,7 +126,7 @@ async def show_settings(update: Update, user_id: int):
         if update.message:
             await update.message.reply_text("❌ Sozlamalarni ko'rishda xatolik.")
 
-async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def settings_handler(update, context):
     """Handle settings menu selection with enhanced options and navigation"""
     if not update.message or not update.message.text or not hasattr(update.message, 'from_user'):
         return ConversationHandler.END
@@ -142,7 +142,7 @@ async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         from handlers.start import show_main_menu
         return await show_main_menu(update, context)
     if text == "🔙 Orqaga":
-        return await show_settings(update, user_id)
+        return await show_settings(update, context)
     
     # Handle settings options
     if text == "💰 Valyutani o'zgartirish":
@@ -162,20 +162,20 @@ async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return SETTINGS_LANGUAGE
         
     elif text == "🔔 Bildirishnomalar":
-        await toggle_notifications(update, user_id)
-        return await show_settings(update, user_id)
+        await toggle_notifications(update, context)
+        return await show_settings(update, context)
         
     elif text == "📊 Avtomatik hisobotlar":
-        await toggle_auto_reports(update, user_id)
-        return await show_settings(update, user_id)
+        await toggle_auto_reports(update, context)
+        return await show_settings(update, context)
         
     elif text == "📤 Ma'lumotlarni eksport qilish":
-        await export_user_data(update, user_id)
-        return await show_settings(update, user_id)
+        await export_user_data(update, context)
+        return await show_settings(update, context)
         
     elif text == "💾 Zaxira nusxasi":
-        await create_backup(update, user_id)
-        return await show_settings(update, user_id)
+        await create_backup(update, context)
+        return await show_settings(update, context)
         
     elif text == "🗑️ Ma'lumotlarni o'chirish":
         await update.message.reply_text(
@@ -191,10 +191,11 @@ async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     else:
         await update.message.reply_text("❌ Noto'g'ri tanlov. Qaytadan tanlang.")
-        return await show_settings(update, user_id)
+        return await show_settings(update, context)
 
-async def toggle_notifications(update: Update, user_id: int):
+async def toggle_notifications(update, context):
     """Toggle notifications setting"""
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     try:
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
@@ -219,8 +220,9 @@ async def toggle_notifications(update: Update, user_id: int):
         if update.message:
             await update.message.reply_text("❌ Bildirishnomalar sozlamasida xatolik.")
 
-async def toggle_auto_reports(update: Update, user_id: int):
+async def toggle_auto_reports(update, context):
     """Toggle auto reports setting"""
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     try:
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
@@ -245,8 +247,9 @@ async def toggle_auto_reports(update: Update, user_id: int):
         if update.message:
             await update.message.reply_text("❌ Avtomatik hisobotlar sozlamasida xatolik.")
 
-async def export_user_data(update: Update, user_id: int):
+async def export_user_data(update, context):
     """Export user data as JSON"""
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     try:
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
@@ -285,8 +288,9 @@ async def export_user_data(update: Update, user_id: int):
         if update.message:
             await update.message.reply_text("❌ Ma'lumotlarni eksport qilishda xatolik.")
 
-async def create_backup(update: Update, user_id: int):
+async def create_backup(update, context):
     """Create backup of user data"""
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     try:
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
@@ -392,7 +396,7 @@ async def currency_selection_handler(update: Update, context: ContextTypes.DEFAU
             conn.commit()
             conn.close()
             await update.message.reply_text(MESSAGES["uz"]["currency_changed"].format(currency=text))
-            return await show_settings(update, user_id)
+            return await show_settings(update, context)
         except sqlite3.Error as e:
             logger.exception(f"Currency update error: {e}")
             await update.message.reply_text("❌ Valyuta o'zgartirishda xatolik.")
@@ -436,7 +440,7 @@ async def delete_data_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             return ConversationHandler.END
     elif text == "❌ Yo'q, bekor qil":
         await update.message.reply_text("❌ Ma'lumotlarni o'chirish bekor qilindi.")
-        return await show_settings(update, user_id)
+        return await show_settings(update, context)
     else:
         await update.message.reply_text(MESSAGES["uz"]["invalid_choice"])
         return 7 

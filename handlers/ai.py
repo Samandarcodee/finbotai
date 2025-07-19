@@ -60,12 +60,16 @@ MESSAGES = {
     }
 }
 
-async def show_ai_menu(update: Update, user_id: int):
+async def show_ai_menu(update, context):
     """Show AI tools menu with improved error handling and navigation"""
     try:
         from constants import get_message
         from utils import get_user_language
         
+        user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+        if not user_id:
+            return ConversationHandler.END
+
         language = get_user_language(user_id)
         ai_menu_text = get_message("ai_menu", user_id)
         
@@ -90,12 +94,16 @@ async def show_ai_menu(update: Update, user_id: int):
             await update.message.reply_text("❌ AI menyusini ko'rishda xatolik.")
         return ConversationHandler.END
 
-async def show_ai_analysis(update: Update, user_id: int):
+async def show_ai_analysis(update, context):
     """Show AI-powered spending analysis with improved functionality"""
     try:
         from constants import MESSAGES
         from utils import get_user_language, format_amount
         
+        user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+        if not user_id:
+            return ConversationHandler.END
+
         language = get_user_language(user_id)
         
         # Show loading message
@@ -227,10 +235,14 @@ async def show_ai_analysis(update: Update, user_id: int):
         if update.message:
             await update.message.reply_text("❌ AI tahlilini olishda xatolik.")
 
-async def show_ai_advice(update: Update, user_id: int):
+async def show_ai_advice(update, context):
     """Show AI financial advice with loading and HTML/emoji formatting."""
     loading_msg = None
     try:
+        user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+        if not user_id:
+            return ConversationHandler.END
+
         if update.message:
             loading_msg = await update.message.reply_text(MESSAGES["uz"]["loading"])
         
@@ -303,12 +315,16 @@ async def show_ai_advice(update: Update, user_id: int):
         if loading_msg:
             await loading_msg.edit_text(MESSAGES["uz"]["ai_error"])
 
-async def show_budget_advice(update: Update, user_id: int):
+async def show_budget_advice(update, context):
     """Show AI budget advice with improved error handling"""
     try:
         from constants import MESSAGES
         from utils import get_user_language, format_amount
         
+        user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+        if not user_id:
+            return ConversationHandler.END
+
         language = get_user_language(user_id)
         
         # Show loading message
@@ -409,12 +425,16 @@ async def show_budget_advice(update: Update, user_id: int):
         if update.message:
             await update.message.reply_text("❌ Byudjet tavsiyasini olishda xatolik.")
 
-async def show_savings_tips(update: Update, user_id: int):
+async def show_savings_tips(update, context):
     """Show AI savings tips with improved error handling"""
     try:
         from constants import MESSAGES
         from utils import get_user_language
         
+        user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+        if not user_id:
+            return ConversationHandler.END
+
         language = get_user_language(user_id)
         
         # Show loading message
@@ -465,10 +485,14 @@ async def show_savings_tips(update: Update, user_id: int):
         if update.message:
             await update.message.reply_text("❌ Tejash maslahatlarini olishda xatolik.")
 
-async def show_investment_advice(update: Update, user_id: int):
+async def show_investment_advice(update, context):
     """Show AI investment advice"""
     loading_msg = None
     try:
+        user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+        if not user_id:
+            return ConversationHandler.END
+
         if update.message:
             loading_msg = await update.message.reply_text(MESSAGES["uz"]["loading"])
         
@@ -549,10 +573,14 @@ async def show_investment_advice(update: Update, user_id: int):
         if loading_msg:
             await loading_msg.edit_text(MESSAGES["uz"]["ai_error"])
 
-async def show_goal_monitoring(update: Update, user_id: int):
+async def show_goal_monitoring(update, context):
     """Show AI goal monitoring"""
     loading_msg = None
     try:
+        user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
+        if not user_id:
+            return ConversationHandler.END
+
         if update.message:
             loading_msg = await update.message.reply_text(MESSAGES["uz"]["loading"])
         
@@ -633,7 +661,7 @@ async def show_goal_monitoring(update: Update, user_id: int):
         if loading_msg:
             await loading_msg.edit_text(MESSAGES["uz"]["ai_error"])
 
-async def handle_ai_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_ai_menu(update, context):
     """Handle AI menu selections with universal navigation"""
     if not update.message or not update.message.text or not hasattr(update.message, 'from_user'):
         return ConversationHandler.END
@@ -649,20 +677,20 @@ async def handle_ai_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         from handlers.start import show_main_menu
         return await show_main_menu(update, context)
     if text == "🔙 Orqaga":
-        return await show_ai_menu(update, user_id)
+        return await show_ai_menu(update, context)
     
     if text == "💰 AI Byudjet Tavsiyasi":
-        await show_budget_advice(update, user_id)
+        await show_budget_advice(update, context)
     elif text == "📊 AI Xarajatlar Tahlili":
-        await show_ai_analysis(update, user_id)
+        await show_ai_analysis(update, context)
     elif text == "🎯 AI Maqsad Monitoring":
-        await show_goal_monitoring(update, user_id)
+        await show_goal_monitoring(update, context)
     elif text == "💡 AI Moliyaviy Maslahat":
-        await show_ai_advice(update, user_id)
+        await show_ai_advice(update, context)
     elif text == "💡 AI Tejash Maslahatlari":
-        await show_savings_tips(update, user_id)
+        await show_savings_tips(update, context)
     elif text == "📈 AI Investitsiya Maslahati":
-        await show_investment_advice(update, user_id)
+        await show_investment_advice(update, context)
     else:
         await update.message.reply_text("❌ Noto'g'ri tanlov. Qaytadan tanlang.")
         return 100  # Return to AI menu state

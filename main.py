@@ -67,7 +67,7 @@ logger.add("finbot.log", rotation="1 day", retention="7 days", level="INFO")
 # Import shared constants and functions
 from constants import (
     ASK_SUPPORT, INCOME_AMOUNT, INCOME_NOTE, EXPENSE_AMOUNT, EXPENSE_NOTE,
-    MESSAGES, MAIN_MODULES_KEYBOARD, get_message, get_keyboard
+    MESSAGES, MAIN_MODULES_KEYBOARD, get_message, get_keyboard, NAV_COMMANDS
 )
 
 # Import utils for shared functions
@@ -157,82 +157,29 @@ async def handle_kirim_chiqim_menu(update, context):
     )
     return ConversationHandler.END
 
+async def navigate_to_main_menu(update, context):
+    from handlers.start import show_main_menu
+    return await show_main_menu(update, context)
+
 async def message_handler(update, context):
     if not update.message or not update.message.text:
         return
     text = update.message.text.strip()
     if is_navigation_command(text):
         return await navigate_to_main_menu(update, context)
-    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     match text:
         case "💰 Kirim/Chiqim":
             return await handle_kirim_chiqim_menu(update, context)
         case "📊 Balans/Tahlil":
-            keyboard = [
-                ["📊 Balans", "📈 Tahlil"],
-                ["🏠 Bosh menyu"]
-            ]
-            await update.message.reply_text(
-                "Balans yoki tahlilni tanlang:",
-                reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False)
-            )
-            return
-        case "📊 Balans":
-            return await show_balance(update, user_id)
-        case "📈 Tahlil":
-            return await show_analysis(update, user_id)
+            # Balans/tahlil funksiyalari
+            pass
         case "🤖 AI vositalar":
-            keyboard = [
-                ["🤖 AI Moliyaviy Maslahat", "📊 AI Xarajatlar Tahlili"],
-                ["💰 AI Byudjet Tavsiyasi", "🏆 AI Maqsad Monitoring"],
-                ["💡 AI Tejash Maslahatlari", "📈 AI Investitsiya Maslahati"],
-                ["🏠 Bosh menyu"]
-            ]
-            await update.message.reply_text(
-                "Quyidagi AI funksiyalaridan birini tanlang:",
-                reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False)
-            )
-            return
-        case "🤖 AI Moliyaviy Maslahat":
-            return await show_ai_advice(update, user_id)
-        case "📊 AI Xarajatlar Tahlili":
-            return await show_ai_analysis(update, user_id)
-        case "💰 AI Byudjet Tavsiyasi":
-            return await show_budget_advice(update, user_id)
-        case "🏆 AI Maqsad Monitoring":
-            return await show_goal_monitoring(update, user_id)
-        case "💡 AI Tejash Maslahatlari":
-            return await show_savings_tips(update, user_id)
-        case "📈 AI Investitsiya Maslahati":
-            return await show_investment_advice(update, user_id)
+            return await show_ai_menu(update, context)
         case "⚙️ Sozlamalar/Yordam":
-            keyboard = [
-                ["💰 Valyutani o'zgartirish", "🌐 Tilni o'zgartirish"],
-                ["🔔 Bildirishnomalar", "📊 Avtomatik hisobotlar"],
-                ["📤 Ma'lumotlarni eksport qilish", "💾 Zaxira nusxasi"],
-                ["🗑️ Ma'lumotlarni o'chirish"],
-                ["🏠 Bosh menyu"]
-            ]
-            await update.message.reply_text(
-                "Sozlamalardan birini tanlang:",
-                reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False)
-            )
-            return
+            return await show_settings(update, context)
         case _:
             await update.message.reply_text("❌ Noto'g'ri tanlov. Bosh menyuga qaytmoqdamiz.")
             return await navigate_to_main_menu(update, context)
-
-async def navigate_to_main_menu(update, context):
-    from handlers.start import show_main_menu
-    keyboard = [
-        ["💰 Kirim/Chiqim", "📊 Balans/Tahlil"],
-        ["🤖 AI vositalar", "⚙️ Sozlamalar/Yordam"]
-    ]
-    await update.message.reply_text(
-        "Quyidagi funksiyalardan birini tanlang:",
-        reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False)
-    )
-    return ConversationHandler.END
 
 async def universal_fallback(update, context):
     if update.message and update.message.text:
@@ -481,7 +428,7 @@ def main():
                 SETTINGS_DELETE: [MessageHandler(filters.TEXT & ~filters.COMMAND, delete_data_handler)],
             },
             fallbacks=[
-                MessageHandler(filters.Regex("^(🔙 Orqaga|🏠 Bosh menyu|/start|/cancel)$"), start)
+                MessageHandler(filters.Regex("|".join(NAV_COMMANDS)), navigate_to_main_menu)
             ]
         )
         app.add_handler(settings_conv_handler)

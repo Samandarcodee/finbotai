@@ -129,6 +129,9 @@ NAVIGATION_MESSAGES = {
 }
 
 NAV_COMMANDS = ["/start", "/cancel", "/help", "🏠 Bosh menyu", "🔙 Orqaga"]
+SETTINGS_CURRENCY = 0
+SETTINGS_LANGUAGE = 1
+SETTINGS_DELETE = 2
 
 def get_message(key, user_id=None, **kwargs):
     """Get message in user's language"""
