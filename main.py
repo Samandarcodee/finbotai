@@ -10,7 +10,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from telegram.error import TelegramError
 from dotenv import load_dotenv
 import sqlite3
-from telegram.update import Update
+from telegram import Update
 from telegram.ext import ContextTypes
 
 # Load environment variables (for local development)
