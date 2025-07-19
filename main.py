@@ -468,13 +468,12 @@ def main():
             7: [MessageHandler(filters.TEXT & ~filters.COMMAND, delete_data_handler)],
             9: [MessageHandler(filters.TEXT & ~filters.COMMAND, currency_selection_handler)],
         },
-        fallbacks=[CommandHandler("start", start), CommandHandler("cancel", cancel)]
+        fallbacks=[CommandHandler("cancel", cancel)]
     )
 
     # Add all handlers
     app.add_handler(support_conv_handler)
     app.add_handler(main_conv_handler)
-    app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(MessageHandler(filters.Regex("^/reply_"), admin_reply))

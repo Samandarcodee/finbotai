@@ -64,15 +64,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def onboarding_currency(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle currency selection during onboarding"""
     if not update.message or not update.message.text:
+        logger.error("No message or text in onboarding_currency")
         return ConversationHandler.END
+    
     text = update.message.text
     user_id = getattr(update.message.from_user, 'id', None)
+    
+    logger.info(f"onboarding_currency called with text: {text}, user_id: {user_id}")
     
     if user_id is None:
         await update.message.reply_text("❌ Foydalanuvchi ma'lumotlari topilmadi.")
         return ConversationHandler.END
     
     currency = get_currency_code(text)
+    logger.info(f"Selected currency: {currency}")
     
     try:
         # Save currency to DB
@@ -86,17 +91,21 @@ async def onboarding_currency(update: Update, context: ContextTypes.DEFAULT_TYPE
         if exists:
             # Update existing user
             c.execute("UPDATE user_settings SET currency = ? WHERE user_id = ?", (currency, user_id))
+            logger.info(f"Updated user {user_id} with currency {currency}")
         else:
             # Insert new user
             c.execute("INSERT INTO user_settings (user_id, currency, onboarding_done) VALUES (?, ?, 0)", (user_id, currency))
+            logger.info(f"Inserted new user {user_id} with currency {currency}")
         
         conn.commit()
         conn.close()
         
+        logger.info(f"Sending next step message to user {user_id}")
         await update.message.reply_text(
             "2️⃣ Oylik taxminiy kirimingizni kiriting (masalan: 3 000 000):",
             reply_markup=ReplyKeyboardMarkup([["Bekor qilish"]], resize_keyboard=True, one_time_keyboard=True)
         )
+        logger.info(f"Returning ONBOARDING_INCOME state: {ONBOARDING_INCOME}")
         return ONBOARDING_INCOME
     except sqlite3.Error as e:
         logger.exception(f"Database error in onboarding_currency: {e}")
