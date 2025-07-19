@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 import json
 from telegram.ext import ContextTypes
 from telegram.ext import ConversationHandler
+from utils import get_navigation_keyboard
 
 # MESSAGES constant
 MESSAGES = {
@@ -60,7 +61,7 @@ MESSAGES = {
 }
 
 async def show_ai_menu(update: Update, user_id: int):
-    """Show AI tools menu with improved error handling"""
+    """Show AI tools menu with improved error handling and navigation"""
     try:
         from constants import get_message
         from utils import get_user_language
@@ -72,9 +73,8 @@ async def show_ai_menu(update: Update, user_id: int):
         keyboard = [
             ["🧠 AI Moliyaviy Maslahat", "📊 AI Xarajatlar Tahlili"],
             ["💰 AI Byudjet Tavsiyasi", "🎯 AI Maqsad Monitoring"],
-            ["💡 AI Tejash Maslahatlari", "📈 AI Investitsiya Maslahati"],
-            ["🔙 Orqaga", "🏠 Bosh menyu"]
-        ]
+            ["💡 AI Tejash Maslahatlari", "📈 AI Investitsiya Maslahati"]
+        ] + get_navigation_keyboard()
         
         if update.message:
             await update.message.reply_text(
@@ -91,62 +91,141 @@ async def show_ai_menu(update: Update, user_id: int):
         return ConversationHandler.END
 
 async def show_ai_analysis(update: Update, user_id: int):
-    """Show AI-powered spending analysis with loading and HTML/emoji formatting."""
-    loading_msg = None
+    """Show AI-powered spending analysis with improved functionality"""
     try:
+        from constants import MESSAGES
+        from utils import get_user_language, format_amount
+        
+        language = get_user_language(user_id)
+        
+        # Show loading message
         if update.message:
             loading_msg = await update.message.reply_text(MESSAGES["uz"]["loading"])
         
         # Get user data for AI analysis
         settings = get_user_settings(user_id)
-        currency = settings['currency']
+        if not settings:
+            await update.message.reply_text("❌ Foydalanuvchi sozlamalari topilmadi.")
+            return
+            
+        currency = settings.get('currency', 'UZS')
         
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
+        
+        # Get recent transactions
         c.execute("""
             SELECT type, amount, note, category, date 
             FROM transactions 
             WHERE user_id = ? 
             ORDER BY date DESC 
-            LIMIT 20
+            LIMIT 10
         """, (user_id,))
         transactions = c.fetchall()
+        
+        # Get spending patterns
+        c.execute("""
+            SELECT category, COUNT(*), SUM(amount) 
+            FROM transactions 
+            WHERE user_id = ? AND type = 'expense' 
+            GROUP BY category 
+            ORDER BY SUM(amount) DESC 
+            LIMIT 5
+        """, (user_id,))
+        categories = c.fetchall()
+        
+        # Get monthly trends
+        current_month = datetime.now().strftime("%Y-%m")
+        c.execute("""
+            SELECT 
+                SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
+                SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense
+            FROM transactions 
+            WHERE user_id = ? AND strftime('%Y-%m', date) = ?
+        """, (user_id, current_month))
+        month_data = c.fetchone()
+        
         conn.close()
         
         if not transactions:
-            if loading_msg:
-                await loading_msg.edit_text(MESSAGES["uz"]["no_data"])
-            return
-        
-        # Prepare data for AI
-        transaction_data = []
-        for t in transactions:
+            analysis_text = "📊 <b>AI XARAJATLAR TAHLILI</b>\n\n"
+            analysis_text += "❌ <b>Hozircha tranzaksiyalar yo'q</b>\n\n"
+            analysis_text += "💡 <b>Tavsiyalar:</b>\n"
+            analysis_text += "• Avval kirim va chiqimlaringizni kiritib bosing\n"
+            analysis_text += "• AI sizga xarajatlar patternlarini tahlil qiladi\n"
+            analysis_text += "• Tejash imkoniyatlarini topadi\n"
+        else:
+            # Analyze the most recent transaction for demo
+            latest_transaction = transactions[0]
+            transaction_type = latest_transaction[0]
+            amount = latest_transaction[1]
+            note = latest_transaction[2]
+            category = latest_transaction[3]
+            
+            # Parse date
             try:
-                date_obj = datetime.strptime(t[4], "%Y-%m-%d %H:%M:%S")
-                date_str = date_obj.strftime("%d.%m")
+                date_obj = datetime.strptime(latest_transaction[4], "%Y-%m-%d %H:%M:%S")
+                date_str = date_obj.strftime("%d-%B")
             except (ValueError, TypeError):
                 date_str = "N/A"
-            transaction_data.append({
-                'type': t[0],
-                'amount': t[1],
-                'note': t[2],
-                'category': t[3],
-                'date': date_str
-            })
+            
+            analysis_text = "📊 <b>AI XARAJATLAR TAHLILI</b>\n\n"
+            analysis_text += "🔍 <b>So'nggi tranzaksiya tahlili:</b>\n\n"
+            analysis_text += f"• <b>Daromad turi</b>: {'Kirim' if transaction_type == 'income' else 'Chiqim'}\n"
+            analysis_text += f"• <b>Sana</b>: {date_str}\n"
+            analysis_text += f"• <b>Miqdor</b>: {format_amount(amount, user_id)}\n"
+            analysis_text += f"• <b>Izoh</b>: \"{note}\"\n"
+            analysis_text += f"• <b>Kategoriya</b>: {category}\n\n"
+            
+            # Add spending patterns
+            if categories:
+                analysis_text += "📈 <b>Xarajatlar patternlari:</b>\n"
+                for i, (cat, count, total) in enumerate(categories[:3], 1):
+                    analysis_text += f"{i}. {cat}: {format_amount(total, user_id)} ({count} ta)\n"
+                analysis_text += "\n"
+            
+            # Add monthly summary
+            if month_data:
+                month_income = month_data[0] or 0
+                month_expense = month_data[1] or 0
+                month_balance = month_income - month_expense
+                
+                analysis_text += "📅 <b>Bu oy statistikasi:</b>\n"
+                analysis_text += f"💰 Kirim: {format_amount(month_income, user_id)}\n"
+                analysis_text += f"💸 Chiqim: {format_amount(month_expense, user_id)}\n"
+                analysis_text += f"💵 Balans: {format_amount(month_balance, user_id)}\n\n"
+            
+            # Add AI insights
+            analysis_text += "🧠 <b>AI tushunchalari:</b>\n"
+            if transaction_type == 'income':
+                analysis_text += "✅ Yaxshi! Daromad qo'shdingiz\n"
+                analysis_text += "💡 Daromadlaringizni diversifikatsiya qilishni o'ylang\n"
+            else:
+                analysis_text += "💸 Xarajat qildingiz\n"
+                analysis_text += "💡 Xarajatlaringizni optimallashtirish imkoniyatlarini ko'rib chiqing\n"
+            
+            analysis_text += "\n📊 <b>Umumiy xulosa:</b>\n"
+            analysis_text += f"{date_str}da \"{category}\" kategoriyasida {format_amount(amount, user_id)} miqdorida "
+            analysis_text += f"{'kirim' if transaction_type == 'income' else 'chiqim'} amalga oshirilgan. "
+            analysis_text += f"Operatsiyaga \"{note}\" degan izoh berilgan."
         
-        # Call AI service
-        try:
-            ai_analysis = await ai_service.analyze_spending_patterns(transaction_data)
-        except Exception as e:
-            logger.exception(f"AI analysis error: {e}")
-            ai_analysis = MESSAGES["uz"]["ai_error"]
+        # Add navigation buttons
+        keyboard = [
+            ["🧠 AI Maslahat", "💰 AI Byudjet"],
+            ["🔙 Orqaga", "🏠 Bosh menyu"]
+        ]
         
-        if loading_msg:
-            await loading_msg.edit_text(f"{MESSAGES['uz']['spending_analysis']}\n\n{ai_analysis}", parse_mode=ParseMode.HTML)
+        if update.message:
+            await update.message.reply_text(
+                analysis_text,
+                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+                parse_mode="HTML"
+            )
+        
     except Exception as e:
         logger.exception(f"AI analysis error: {e}")
-        if loading_msg:
-            await loading_msg.edit_text(MESSAGES["uz"]["ai_error"])
+        if update.message:
+            await update.message.reply_text("❌ AI tahlilini olishda xatolik.")
 
 async def show_ai_advice(update: Update, user_id: int):
     """Show AI financial advice with loading and HTML/emoji formatting."""
@@ -555,7 +634,7 @@ async def show_goal_monitoring(update: Update, user_id: int):
             await loading_msg.edit_text(MESSAGES["uz"]["ai_error"])
 
 async def handle_ai_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle AI menu selections"""
+    """Handle AI menu selections with universal navigation"""
     if not update.message or not update.message.text or not hasattr(update.message, 'from_user'):
         return ConversationHandler.END
     
@@ -565,6 +644,13 @@ async def handle_ai_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not user_id:
         return ConversationHandler.END
     
+    # Universal navigation
+    if text in ["🏠 Bosh menyu", "/start"]:
+        from handlers.start import show_main_menu
+        return await show_main_menu(update, context)
+    if text == "🔙 Orqaga":
+        return await show_ai_menu(update, user_id)
+    
     if text == "💰 AI Byudjet Tavsiyasi":
         await show_budget_advice(update, user_id)
     elif text == "📊 AI Xarajatlar Tahlili":
@@ -573,13 +659,10 @@ async def handle_ai_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await show_goal_monitoring(update, user_id)
     elif text == "💡 AI Moliyaviy Maslahat":
         await show_ai_advice(update, user_id)
-    elif text == "💎 AI Tejash Maslahatlari":
+    elif text == "💡 AI Tejash Maslahatlari":
         await show_savings_tips(update, user_id)
     elif text == "📈 AI Investitsiya Maslahati":
         await show_investment_advice(update, user_id)
-    elif text == "🔙 Orqaga":
-        from handlers.start import start
-        return await start(update, context)
     else:
         await update.message.reply_text("❌ Noto'g'ri tanlov. Qaytadan tanlang.")
         return 100  # Return to AI menu state

@@ -10,6 +10,7 @@ from telegram.constants import ParseMode
 from datetime import datetime, timedelta
 from db import init_db, get_db_connection, get_user_settings, get_currency_code, set_onboarded, is_onboarded, DB_PATH
 from loguru import logger
+from utils import get_navigation_keyboard
 
 ONBOARDING_LANGUAGE, ONBOARDING_CURRENCY, ONBOARDING_INCOME, ONBOARDING_GOAL = 300, 301, 302, 303
 
@@ -293,7 +294,7 @@ async def complete_onboarding(update: Update, user_id: int, context: ContextType
         logger.exception(f"Error completing onboarding: {e}")
         await update.message.reply_text("❌ Onboarding yakunlashda xatolik.")
 
-async def show_main_menu(update):
+async def show_main_menu(update, context=None):
     """Show main menu with improved UI and navigation"""
     if not update.message:
         return ConversationHandler.END
@@ -307,6 +308,8 @@ async def show_main_menu(update):
         
         # Get user's language and create appropriate keyboard
         keyboard = get_keyboard(user_id)
+        # Add navigation buttons to main menu
+        keyboard = keyboard + get_navigation_keyboard()
         
         # Create main menu text
         menu_text = get_message("main_menu_text", user_id)

@@ -100,6 +100,34 @@ MAIN_MODULES_KEYBOARD = {
     ]
 }
 
+# Universal navigation messages
+NAVIGATION_MESSAGES = {
+    "uz": {
+        "back_button": "🔙 Orqaga",
+        "main_menu_button": "🏠 Bosh menyu",
+        "invalid_choice": "❌ Noto'g'ri tanlov. Qaytadan tanlang.",
+        "navigation_error": "❌ Navigatsiya xatoligi. Bosh menyuga qaytamiz.",
+        "loading": "⏳ Yuklanmoqda...",
+        "error_occurred": "❌ Xatolik yuz berdi. Qaytadan urinib ko'ring."
+    },
+    "ru": {
+        "back_button": "🔙 Назад",
+        "main_menu_button": "🏠 Главное меню",
+        "invalid_choice": "❌ Неверный выбор. Выберите снова.",
+        "navigation_error": "❌ Ошибка навигации. Возвращаемся в главное меню.",
+        "loading": "⏳ Загрузка...",
+        "error_occurred": "❌ Произошла ошибка. Попробуйте снова."
+    },
+    "en": {
+        "back_button": "🔙 Back",
+        "main_menu_button": "🏠 Main Menu",
+        "invalid_choice": "❌ Invalid choice. Please select again.",
+        "navigation_error": "❌ Navigation error. Returning to main menu.",
+        "loading": "⏳ Loading...",
+        "error_occurred": "❌ An error occurred. Please try again."
+    }
+}
+
 def get_message(key, user_id=None, **kwargs):
     """Get message in user's language"""
     from utils import get_user_language
@@ -107,9 +135,30 @@ def get_message(key, user_id=None, **kwargs):
     message = MESSAGES.get(language, MESSAGES["uz"]).get(key, MESSAGES["uz"].get(key, key))
     return message.format(**kwargs) if kwargs else message
 
-def get_keyboard(user_id=None):
-    """Get keyboard in user's language"""
+def get_keyboard(user_id):
+    """Get keyboard with navigation buttons"""
     from utils import get_user_language
-    language = get_user_language(user_id) if user_id else "uz"
-    return MAIN_MODULES_KEYBOARD.get(language, MAIN_MODULES_KEYBOARD["uz"]) 
- 
+    language = get_user_language(user_id)
+    
+    if language == "ru":
+        return [
+            ["💰 Доход/Расход", "📊 Баланс/Анализ"],
+            ["🤖 AI инструменты", "⚙️ Настройки/Помощь"]
+        ]
+    elif language == "en":
+        return [
+            ["💰 Income/Expense", "📊 Balance/Analysis"],
+            ["🤖 AI Tools", "⚙️ Settings/Help"]
+        ]
+    else:  # uz
+        return [
+            ["💰 Kirim/Chiqim", "📊 Balans/Tahlil"],
+            ["🤖 AI vositalar", "⚙️ Sozlamalar/Yordam"]
+        ]
+
+def get_navigation_buttons(language="uz"):
+    """Get universal navigation buttons"""
+    return [
+        NAVIGATION_MESSAGES[language]["back_button"],
+        NAVIGATION_MESSAGES[language]["main_menu_button"]
+    ] 

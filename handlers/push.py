@@ -8,7 +8,7 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
 from telegram.constants import ParseMode
 from db import get_all_user_ids, is_onboarded, get_user_settings, get_weekly_stats, DB_PATH
-from utils import format_amount
+from utils import format_amount, get_navigation_keyboard
 from ai_service import ai_service
 import asyncio
 from loguru import logger
@@ -219,6 +219,192 @@ async def send_monthly_feedback_push(context):
 async def cancel_push(update, context):
     """Cancel push operation"""
     return ConversationHandler.END
+
+async def show_push_menu(update: Update, user_id: int):
+    """Show push notifications menu with navigation"""
+    try:
+        settings = get_user_settings(user_id)
+        if not settings:
+            await update.message.reply_text("❌ Foydalanuvchi sozlamalari topilmadi.")
+            return
+            
+        notifications = settings.get('notifications', True)
+        auto_reports = settings.get('auto_reports', False)
+        
+        text = (
+            "🔔 <b>BILDIRISHNOMALAR</b>\n\n"
+            f"🔔 Push bildirishnomalar: {'✅ Yoqilgan' if notifications else '❌ O\'chirilgan'}\n"
+            f"📊 Avtomatik hisobotlar: {'✅ Yoqilgan' if auto_reports else '❌ O\'chirilgan'}\n\n"
+            "Bildirishnomalarni sozlash uchun tugmalardan birini bosing:"
+        )
+        
+        keyboard = [
+            ["🔔 Push bildirishnomalar", "📊 Avtomatik hisobotlar"],
+            ["⏰ Eslatmalar", "📱 Test bildirishnoma"]
+        ] + get_navigation_keyboard()
+        
+        if update.message:
+            await update.message.reply_text(
+                text,
+                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+                parse_mode="HTML"
+            )
+    except Exception as e:
+        logger.exception(f"Push menu error: {e}")
+        if update.message:
+            await update.message.reply_text("❌ Bildirishnomalar menyusini ko'rishda xatolik.")
+
+async def handle_push_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle push notifications menu with navigation"""
+    if not update.message or not update.message.text:
+        return ConversationHandler.END
+    
+    text = update.message.text
+    user_id = getattr(update.message.from_user, 'id', None)
+    
+    if not user_id:
+        return ConversationHandler.END
+    
+    # Universal navigation
+    if text in ["🏠 Bosh menyu", "/start"]:
+        from handlers.start import show_main_menu
+        return await show_main_menu(update, context)
+    if text == "🔙 Orqaga":
+        from handlers.start import show_main_menu
+        return await show_main_menu(update, context)
+    
+    # Handle push menu options
+    if text == "🔔 Push bildirishnomalar":
+        await toggle_push_notifications(update, user_id)
+        return await show_push_menu(update, user_id)
+        
+    elif text == "📊 Avtomatik hisobotlar":
+        await toggle_auto_reports(update, user_id)
+        return await show_push_menu(update, user_id)
+        
+    elif text == "⏰ Eslatmalar":
+        keyboard = [
+            ["🕐 Har kuni", "📅 Haftada bir marta"],
+            ["📊 Oy oxirida", "🎯 Maqsad eslatmalari"]
+        ] + get_navigation_keyboard()
+        
+        await update.message.reply_text(
+            "⏰ <b>ESLATMALAR</b>\n\n"
+            "Qanday eslatmalar kerak?",
+            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+            parse_mode="HTML"
+        )
+        return 1  # Reminders state
+        
+    elif text == "📱 Test bildirishnoma":
+        await send_test_notification(update, user_id)
+        return await show_push_menu(update, user_id)
+        
+    else:
+        await update.message.reply_text("❌ Noto'g'ri tanlov. Qaytadan tanlang.")
+        return await show_push_menu(update, user_id)
+
+async def handle_reminders(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle reminder settings with navigation"""
+    if not update.message or not update.message.text:
+        return ConversationHandler.END
+    
+    text = update.message.text
+    user_id = getattr(update.message.from_user, 'id', None)
+    
+    if not user_id:
+        return ConversationHandler.END
+    
+    # Universal navigation
+    if text in ["🏠 Bosh menyu", "/start"]:
+        from handlers.start import show_main_menu
+        return await show_main_menu(update, context)
+    if text == "🔙 Orqaga":
+        return await show_push_menu(update, user_id)
+    
+    # Handle reminder options
+    if text == "🕐 Har kuni":
+        await set_daily_reminders(update, user_id)
+    elif text == "📅 Haftada bir marta":
+        await set_weekly_reminders(update, user_id)
+    elif text == "📊 Oy oxirida":
+        await set_monthly_reminders(update, user_id)
+    elif text == "🎯 Maqsad eslatmalari":
+        await set_goal_reminders(update, user_id)
+    else:
+        await update.message.reply_text("❌ Noto'g'ri tanlov. Qaytadan tanlang.")
+        return 1  # Stay in reminders state
+    
+    return await show_push_menu(update, user_id)
+
+async def toggle_push_notifications(update: Update, user_id: int):
+    """Toggle push notifications with navigation"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        
+        # Get current setting
+        c.execute("SELECT notifications FROM user_settings WHERE user_id = ?", (user_id,))
+        result = c.fetchone()
+        
+        if result:
+            current = result[0]
+            new_setting = not current
+            
+            c.execute("UPDATE user_settings SET notifications = ? WHERE user_id = ?", (new_setting, user_id))
+            conn.commit()
+            
+            status = "✅ Yoqildi" if new_setting else "❌ O'chirildi"
+            await update.message.reply_text(f"🔔 Push bildirishnomalar {status}")
+        else:
+            await update.message.reply_text("❌ Foydalanuvchi sozlamalari topilmadi.")
+            
+        conn.close()
+        
+    except Exception as e:
+        logger.exception(f"Toggle notifications error: {e}")
+        await update.message.reply_text("❌ Bildirishnomalarni o'zgartirishda xatolik.")
+
+async def toggle_auto_reports(update: Update, user_id: int):
+    """Toggle auto reports with navigation"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        
+        # Get current setting
+        c.execute("SELECT auto_reports FROM user_settings WHERE user_id = ?", (user_id,))
+        result = c.fetchone()
+        
+        if result:
+            current = result[0]
+            new_setting = not current
+            
+            c.execute("UPDATE user_settings SET auto_reports = ? WHERE user_id = ?", (new_setting, user_id))
+            conn.commit()
+            
+            status = "✅ Yoqildi" if new_setting else "❌ O'chirildi"
+            await update.message.reply_text(f"📊 Avtomatik hisobotlar {status}")
+        else:
+            await update.message.reply_text("❌ Foydalanuvchi sozlamalari topilmadi.")
+            
+        conn.close()
+        
+    except Exception as e:
+        logger.exception(f"Toggle auto reports error: {e}")
+        await update.message.reply_text("❌ Avtomatik hisobotlarni o'zgartirishda xatolik.")
+
+async def send_test_notification(update: Update, user_id: int):
+    """Send test notification with navigation"""
+    try:
+        await update.message.reply_text(
+            "📱 <b>Test bildirishnoma</b>\n\n"
+            "✅ Bu test bildirishnoma. Agar siz buni ko'rsangiz, "
+            "bildirishnomalar to'g'ri ishlayapti!",
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        logger.exception(f"Test notification error: {e}")
+        await update.message.reply_text("❌ Test bildirishnomani yuborishda xatolik.")
 
 # PUSH CONV HANDLER
 push_conv_handler = ConversationHandler(

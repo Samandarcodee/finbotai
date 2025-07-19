@@ -69,3 +69,10 @@ def format_amount(amount, user_id):
         return f"{symbol}{formatted_amount}"
     else:
         return f"{formatted_amount} {symbol}" 
+
+def get_navigation_keyboard(extra_buttons=None):
+    """Return a keyboard with extra buttons and navigation buttons."""
+    base = ["🔙 Orqaga", "🏠 Bosh menyu"]
+    if extra_buttons:
+        return [extra_buttons] + [base]
+    return [base] 

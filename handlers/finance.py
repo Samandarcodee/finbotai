@@ -9,7 +9,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 from telegram.constants import ParseMode
 from datetime import datetime
 from db import get_db_connection, get_user_settings, validate_amount, DB_PATH
-from utils import format_amount
+from utils import format_amount, get_navigation_keyboard
 from loguru import logger
 
 # State constants
@@ -17,27 +17,25 @@ INCOME_AMOUNT, INCOME_NOTE = 101, 102
 EXPENSE_AMOUNT, EXPENSE_NOTE = 201, 202
 
 def get_category_keyboard(is_income=True):
-    """Get category keyboard for income or expense"""
+    """Get category keyboard for income or expense with navigation"""
     if is_income:
         categories = [
             ["💵 Maosh", "🏦 Kredit/qarz"],
             ["🎁 Sovg'a/yordam", "💸 Qo'shimcha daromad"],
-            ["💳 Boshqa daromad"],
-            ["🔙 Orqaga", "❌ Bekor qilish", "🏠 Bosh menyu"]
-        ]
+            ["💳 Boshqa daromad"]
+        ] + get_navigation_keyboard()
     else:
         categories = [
             ["🍔 Oziq-ovqat", "🚗 Transport"],
             ["💊 Sog'liq", "📚 Ta'lim"],
             ["🎮 O'yin-kulgi", "👕 Kiyim"],
             ["🏠 Uy", "📱 Aloqa"],
-            ["💳 Boshqa chiqim", "🔙 Orqaga"],
-            ["❌ Bekor qilish", "🏠 Bosh menyu"]
-        ]
+            ["💳 Boshqa chiqim"]
+        ] + get_navigation_keyboard()
     return ReplyKeyboardMarkup(categories, resize_keyboard=True, one_time_keyboard=True)
 
 async def show_balance(update: Update, user_id: int):
-    """Show user balance with improved formatting and emoji sections"""
+    """Show user balance with improved formatting and navigation"""
     try:
         settings = get_user_settings(user_id)
         if not settings:
@@ -90,8 +88,8 @@ async def show_balance(update: Update, user_id: int):
         # Add navigation buttons
         keyboard = [
             ["📈 Tahlil", "📊 Kategoriyalar"],
-            ["🔙 Orqaga", "🏠 Bosh menyu"]
-        ]
+            ["💰 Kirim/Chiqim"]
+        ] + get_navigation_keyboard()
         
         if update.message:
             await update.message.reply_text(
@@ -120,7 +118,7 @@ def get_balance_advice(total_balance, month_balance):
         return "Balansingiz barqaror. Davom eting!"
 
 async def show_analysis(update: Update, user_id: int):
-    """Show transaction analysis with improved formatting"""
+    """Show transaction analysis with improved formatting and navigation"""
     try:
         settings = get_user_settings(user_id)
         if not settings:
@@ -157,9 +155,8 @@ async def show_analysis(update: Update, user_id: int):
         
         if not transactions:
             keyboard = [
-                ["💰 Kirim qo'shish", "💸 Chiqim qo'shish"],
-                ["🔙 Orqaga", "🏠 Bosh menyu"]
-            ]
+                ["💰 Kirim qo'shish", "💸 Chiqim qo'shish"]
+            ] + get_navigation_keyboard()
             if update.message:
                 await update.message.reply_text(
                     "📈 <b>TAHLIL</b>\n\n"
@@ -192,8 +189,8 @@ async def show_analysis(update: Update, user_id: int):
         # Add navigation buttons
         keyboard = [
             ["📊 Balans", "📊 Kategoriyalar"],
-            ["🔙 Orqaga", "🏠 Bosh menyu"]
-        ]
+            ["💰 Kirim/Chiqim"]
+        ] + get_navigation_keyboard()
         
         if update.message:
             await update.message.reply_text(
@@ -641,8 +638,23 @@ async def show_records(update: Update, user_id: int):
             await update.message.reply_text("❌ Rekordlarni ko'rishda xatolik.")
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Cancel current operation"""
-    if not update.message or not update.message.text:
+    """Cancel current operation and return to main menu with navigation"""
+    if not update.message:
         return ConversationHandler.END
-    await update.message.reply_text("❌ Amal bekor qilindi.")
-    return ConversationHandler.END 
+    
+    user_id = getattr(update.message.from_user, 'id', None)
+    if not user_id:
+        return ConversationHandler.END
+    
+    # Universal navigation
+    if update.message.text in ["🏠 Bosh menyu", "/start"]:
+        from handlers.start import show_main_menu
+        return await show_main_menu(update, context)
+    elif update.message.text == "🔙 Orqaga":
+        # Return to previous menu based on context
+        from handlers.start import show_main_menu
+        return await show_main_menu(update, context)
+    else:
+        # Default cancel behavior
+        from handlers.start import show_main_menu
+        return await show_main_menu(update, context) 

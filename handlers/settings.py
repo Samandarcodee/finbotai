@@ -11,6 +11,7 @@ from loguru import logger
 from telegram.constants import ParseMode
 import json
 from datetime import datetime
+from utils import get_navigation_keyboard
 
 # Import start function from start handler
 from handlers.start import start
@@ -85,45 +86,31 @@ MESSAGES = {
 }
 
 async def show_settings(update: Update, user_id: int):
-    """Show user settings with enhanced menu"""
+    """Show settings menu with improved navigation"""
     try:
+        from constants import MESSAGES
         settings = get_user_settings(user_id)
+        if not settings:
+            await update.message.reply_text(MESSAGES["uz"]["user_not_found"])
+            return ConversationHandler.END
         currency = settings.get('currency', 'UZS')
         language = settings.get('language', 'uz')
         notifications = settings.get('notifications', True)
         auto_reports = settings.get('auto_reports', False)
-        
-        # Get language display name
-        lang_names = {"uz": "🇺🇿 O'zbekcha", "ru": "🇷🇺 Русский", "en": "🇺🇸 English"}
-        lang_display = lang_names.get(language, "🇺🇿 O'zbekcha")
-        
-        # Get currency display name
-        currency_names = {
-            "UZS": "🇺🇿 So'm", "USD": "💵 Dollar", "EUR": "💶 Euro",
-            "RUB": "🇷🇺 Rubl", "KZT": "🇰🇿 Tenge", "KGS": "🇰🇬 Som"
-        }
-        currency_display = currency_names.get(currency, "🇺🇿 So'm")
-        
-        notifications_status = "✅ Yoqilgan" if notifications else "❌ O'chirilgan"
-        reports_status = "✅ Yoqilgan" if auto_reports else "❌ O'chirilgan"
-        
         text = (
-            "⚙️ <b>SOZLAMALAR</b>\n\n"
-            f"💰 <b>Valyuta:</b> {currency_display}\n"
-            f"🌐 <b>Til:</b> {lang_display}\n"
-            f"🔔 <b>Bildirishnomalar:</b> {notifications_status}\n"
-            f"📊 <b>Avtomatik hisobotlar:</b> {reports_status}\n\n"
+            f"⚙️ <b>SOZLAMALAR</b>\n\n"
+            f"💰 Valyuta: {currency}\n"
+            f"🌐 Til: {language}\n"
+            f"🔔 Bildirishnomalar: {'✅ Yoqilgan' if notifications else '❌ O\'chirilgan'}\n"
+            f"📊 Avtomatik hisobotlar: {'✅ Yoqilgan' if auto_reports else '❌ O\'chirilgan'}\n\n"
             "Sozlamalarni o'zgartirish uchun tugmalardan birini bosing:"
         )
-        
         keyboard = [
             ["💰 Valyutani o'zgartirish", "🌐 Tilni o'zgartirish"],
             ["🔔 Bildirishnomalar", "📊 Avtomatik hisobotlar"],
             ["📤 Ma'lumotlarni eksport qilish", "💾 Zaxira nusxasi"],
-            ["🗑️ Ma'lumotlarni o'chirish"],
-            ["🔙 Orqaga"]
-        ]
-        
+            ["🗑️ Ma'lumotlarni o'chirish"]
+        ] + get_navigation_keyboard()
         if update.message:
             await update.message.reply_text(
                 text, 
@@ -137,61 +124,71 @@ async def show_settings(update: Update, user_id: int):
             await update.message.reply_text("❌ Sozlamalarni ko'rishda xatolik.")
 
 async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle settings menu selection with enhanced options"""
+    """Handle settings menu selection with enhanced options and navigation"""
     if not update.message or not update.message.text or not hasattr(update.message, 'from_user'):
         return ConversationHandler.END
     
     text = update.message.text
     user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     
-    if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu", "🏠 Bosh menyu"]:
-        return await start(update, context)
-    elif text in ["💰 Valyutani o'zgartirish", "💰 Изменить валюту", "💰 Change currency"]:
+    if not user_id:
+        return ConversationHandler.END
+    
+    # Universal navigation
+    if text in ["🏠 Bosh menyu", "/start"]:
+        from handlers.start import show_main_menu
+        return await show_main_menu(update, context)
+    if text == "🔙 Orqaga":
+        return await show_settings(update, user_id)
+    
+    # Handle settings options
+    if text == "💰 Valyutani o'zgartirish":
         reply_markup = ReplyKeyboardMarkup([
             ["🇺🇿 So'm", "💵 Dollar", "💶 Euro"],
             ["🇷🇺 Rubl", "🇰🇿 Tenge", "🇰🇬 Som"],
-            ["🇹🇷 Lira", "🇨🇳 Yuan", "🇯🇵 Yen"],
-            ["🔙 Orqaga"]
-        ], resize_keyboard=True, one_time_keyboard=True)
-        await update.message.reply_text(MESSAGES["uz"]["choose_currency"], reply_markup=reply_markup)
+            ["🇹🇷 Lira", "🇨🇳 Yuan", "🇯🇵 Yen"]
+        ] + get_navigation_keyboard(), resize_keyboard=True, one_time_keyboard=True)
+        await update.message.reply_text("Valyutani tanlang:", reply_markup=reply_markup)
         return SETTINGS_CURRENCY
-    elif text in ["🌐 Tilni o'zgartirish", "🌐 Изменить язык", "🌐 Change language"]:
+        
+    elif text == "🌐 Tilni o'zgartirish":
         reply_markup = ReplyKeyboardMarkup([
-            ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"],
-            ["🔙 Orqaga"]
-        ], resize_keyboard=True, one_time_keyboard=True)
-        await update.message.reply_text(MESSAGES["uz"]["choose_language"], reply_markup=reply_markup)
+            ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"]
+        ] + get_navigation_keyboard(), resize_keyboard=True, one_time_keyboard=True)
+        await update.message.reply_text("Tilni tanlang:", reply_markup=reply_markup)
         return SETTINGS_LANGUAGE
-    elif text in ["🔔 Bildirishnomalar", "🔔 Уведомления", "🔔 Notifications"]:
-        if user_id:
-            await toggle_notifications(update, user_id)
-            return await show_settings(update, user_id)
-    elif text in ["📊 Avtomatik hisobotlar", "📊 Автоотчеты", "📊 Auto reports"]:
-        if user_id:
-            await toggle_auto_reports(update, user_id)
-            return await show_settings(update, user_id)
-    elif text in ["📤 Ma'lumotlarni eksport qilish", "📤 Экспорт данных", "📤 Export data"]:
-        if user_id:
-            await export_user_data(update, user_id)
-            return await show_settings(update, user_id)
-    elif text in ["💾 Zaxira nusxasi", "💾 Резервная копия", "💾 Backup"]:
-        if user_id:
-            await create_backup(update, user_id)
-            return await show_settings(update, user_id)
+        
+    elif text == "🔔 Bildirishnomalar":
+        await toggle_notifications(update, user_id)
+        return await show_settings(update, user_id)
+        
+    elif text == "📊 Avtomatik hisobotlar":
+        await toggle_auto_reports(update, user_id)
+        return await show_settings(update, user_id)
+        
+    elif text == "📤 Ma'lumotlarni eksport qilish":
+        await export_user_data(update, user_id)
+        return await show_settings(update, user_id)
+        
+    elif text == "💾 Zaxira nusxasi":
+        await create_backup(update, user_id)
+        return await show_settings(update, user_id)
+        
     elif text == "🗑️ Ma'lumotlarni o'chirish":
         await update.message.reply_text(
-            MESSAGES["uz"]["delete_confirm"],
+            "⚠️ <b>Eslatma:</b> Bu amal barcha ma'lumotlaringizni o'chiradi va qayta tiklanmaydi.\n\n"
+            "Haqiqatan ham ma'lumotlaringizni o'chirmoqchimisiz?",
             reply_markup=ReplyKeyboardMarkup([
                 ["✅ Ha, o'chir"],
                 ["❌ Yo'q, bekor qil"]
-            ], resize_keyboard=True, one_time_keyboard=True)
+            ] + get_navigation_keyboard(), resize_keyboard=True, one_time_keyboard=True),
+            parse_mode="HTML"
         )
         return SETTINGS_DELETE
-    elif text == "🔙 Orqaga":
-        return await start(update, context)
+        
     else:
-        await update.message.reply_text(MESSAGES["uz"]["invalid_choice"])
-        return 5  # Return to main settings menu state
+        await update.message.reply_text("❌ Noto'g'ri tanlov. Qaytadan tanlang.")
+        return await show_settings(update, user_id)
 
 async def toggle_notifications(update: Update, user_id: int):
     """Toggle notifications setting"""

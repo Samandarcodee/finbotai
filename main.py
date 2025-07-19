@@ -10,6 +10,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from telegram.error import TelegramError
 from dotenv import load_dotenv
 import sqlite3
+from telegram.update import Update
+from telegram.ext import ContextTypes
 
 # Load environment variables (for local development)
 try:
@@ -323,6 +325,36 @@ async def global_error_handler(update, context):
         await update.effective_message.reply_text(
             get_message("error_soft", update.effective_user.id if update.effective_user else None)
         )
+
+# Universal fallback handler for all conversations
+async def universal_fallback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Universal fallback handler that redirects to main menu"""
+    if not update.message:
+        return ConversationHandler.END
+    
+    user_id = getattr(update.message.from_user, 'id', None)
+    if not user_id:
+        return ConversationHandler.END
+    
+    # Check for navigation commands
+    text = update.message.text
+    if text in ["🏠 Bosh menyu", "/start", "/cancel"]:
+        from handlers.start import show_main_menu
+        return await show_main_menu(update, context)
+    elif text == "🔙 Orqaga":
+        # Try to go back to previous menu
+        from handlers.start import show_main_menu
+        return await show_main_menu(update, context)
+    else:
+        # Invalid choice - redirect to main menu
+        await update.message.reply_text(
+            "❌ Noto'g'ri tanlov. Bosh menyuga qaytamiz.",
+            reply_markup=ReplyKeyboardMarkup([
+                ["💰 Kirim/Chiqim", "📊 Balans/Tahlil"],
+                ["🤖 AI vositalar", "⚙️ Sozlamalar/Yordam"]
+            ] + [["🔙 Orqaga", "🏠 Bosh menyu"]], resize_keyboard=True)
+        )
+        return ConversationHandler.END
 
 def setup_schedulers(app):
     """Setup scheduled tasks"""
