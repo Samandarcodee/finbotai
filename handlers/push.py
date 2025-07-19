@@ -14,6 +14,7 @@ import asyncio
 from loguru import logger
 from datetime import datetime, timedelta
 import os
+from constants import get_message
 
 # Push states
 PUSH_TOPIC, PUSH_CONFIRM = 401, 402
@@ -302,7 +303,7 @@ async def handle_push_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await show_push_menu(update, user_id)
         
     else:
-        await update.message.reply_text("❌ Noto'g'ri tanlov. Qaytadan tanlang.")
+        await update.message.reply_text(get_message("invalid_choice", user_id))
         return await show_push_menu(update, user_id)
 
 async def handle_reminders(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -333,7 +334,7 @@ async def handle_reminders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "🎯 Maqsad eslatmalari":
         await set_goal_reminders(update, user_id)
     else:
-        await update.message.reply_text("❌ Noto'g'ri tanlov. Qaytadan tanlang.")
+        await update.message.reply_text(get_message("invalid_choice", user_id))
         return 1  # Stay in reminders state
     
     return await show_push_menu(update, user_id)

@@ -11,6 +11,7 @@ from datetime import datetime
 from db import get_db_connection, get_user_settings, validate_amount, DB_PATH
 from utils import format_amount, get_navigation_keyboard, build_reply_keyboard
 from loguru import logger
+from constants import get_message
 
 # State constants
 INCOME_AMOUNT, INCOME_NOTE = 101, 102
@@ -42,7 +43,7 @@ async def show_balance(update: Update, user_id: int):
     try:
         settings = get_user_settings(user_id)
         if not settings:
-            await update.message.reply_text("❌ Foydalanuvchi sozlamalari topilmadi.")
+            await update.message.reply_text(get_message("balance_settings_not_found", user_id))
             return
             
         currency = settings.get('currency', 'UZS')
@@ -102,11 +103,11 @@ async def show_balance(update: Update, user_id: int):
     except sqlite3.Error as e:
         logger.exception(f"Balance error: {e}")
         if update.message:
-            await update.message.reply_text("❌ Balansni ko'rishda xatolik. Qaytadan urinib ko'ring.")
+            await update.message.reply_text(get_message("balance_error", user_id))
     except Exception as e:
         logger.exception(f"Unexpected error in show_balance: {e}")
         if update.message:
-            await update.message.reply_text("❌ Kutilmagan xatolik yuz berdi.")
+            await update.message.reply_text(get_message("unexpected_error", user_id))
 
 def get_balance_advice(total_balance, month_balance):
     """Get personalized balance advice"""
@@ -124,7 +125,7 @@ async def show_analysis(update: Update, user_id: int):
     try:
         settings = get_user_settings(user_id)
         if not settings:
-            await update.message.reply_text("❌ Foydalanuvchi sozlamalari topilmadi.")
+            await update.message.reply_text(get_message("analysis_settings_not_found", user_id))
             return
             
         currency = settings.get('currency', 'UZS')
@@ -203,11 +204,11 @@ async def show_analysis(update: Update, user_id: int):
     except sqlite3.Error as e:
         logger.exception(f"Analysis error: {e}")
         if update.message:
-            await update.message.reply_text("❌ Tahlilni ko'rishda xatolik. Qaytadan urinib ko'ring.")
+            await update.message.reply_text(get_message("analysis_error", user_id))
     except Exception as e:
         logger.exception(f"Unexpected error in show_analysis: {e}")
         if update.message:
-            await update.message.reply_text("❌ Kutilmagan xatolik yuz berdi.")
+            await update.message.reply_text(get_message("unexpected_error", user_id))
 
 async def add_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Add income transaction"""
@@ -227,7 +228,7 @@ async def add_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     amount, error = validate_amount(text)
     if error:
-        await update.message.reply_text(f"❌ {error}\n\nQaytadan kiriting yoki 'Bekor qilish' tugmasini bosing.")
+        await update.message.reply_text(get_message("income_amount_error", user_id))
         return 1
     
     # Extract note from text
@@ -257,7 +258,7 @@ async def add_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     except sqlite3.Error as e:
         logger.exception(f"Income add error: {e}")
-        await update.message.reply_text("❌ Xatolik yuz berdi. Qaytadan urinib ko'ring.")
+        await update.message.reply_text(get_message("income_add_error", user_id))
         return ConversationHandler.END
 
 async def income_category_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -299,7 +300,7 @@ async def income_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await cancel(update, context)
     amount, error = validate_amount(text)
     if error:
-        await update.message.reply_text(f"❌ {error}\n\nQaytadan kiriting yoki 'Bekor qilish' tugmasini bosing.")
+        await update.message.reply_text(get_message("income_amount_error", context.user_data.get('user_id')))
         return INCOME_AMOUNT
     context.user_data['income_amount'] = amount
     await update.message.reply_text(
@@ -346,7 +347,7 @@ async def income_note(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     except sqlite3.Error as e:
         logger.exception(f"Income add error: {e}")
-        await update.message.reply_text("❌ Xatolik yuz berdi. Qaytadan urinib ko'ring.")
+        await update.message.reply_text(get_message("income_add_error", user_id))
         return ConversationHandler.END
 
 async def expense_category_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -392,7 +393,7 @@ async def expense_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await cancel(update, context)
     amount, error = validate_amount(text)
     if error:
-        await update.message.reply_text(f"❌ {error}\n\nQaytadan kiriting yoki 'Bekor qilish' tugmasini bosing.")
+        await update.message.reply_text(get_message("expense_amount_error", context.user_data.get('user_id')))
         return EXPENSE_AMOUNT
     context.user_data['expense_amount'] = amount
     await update.message.reply_text(
@@ -439,7 +440,7 @@ async def expense_note(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     except sqlite3.Error as e:
         logger.exception(f"Expense add error: {e}")
-        await update.message.reply_text("❌ Xatolik yuz berdi. Qaytadan urinib ko'ring.")
+        await update.message.reply_text(get_message("expense_add_error", user_id))
         return ConversationHandler.END
 
 async def show_categories(update: Update, user_id: int):
@@ -483,7 +484,7 @@ async def show_categories(update: Update, user_id: int):
     except sqlite3.Error as e:
         logger.exception(f"Categories error: {e}")
         if update.message:
-            await update.message.reply_text("❌ Kategoriyalarni ko'rishda xatolik.")
+            await update.message.reply_text(get_message("categories_error", user_id))
 
 async def show_budget_status(update: Update, user_id: int):
     """Show budget status"""
@@ -528,7 +529,7 @@ async def show_budget_status(update: Update, user_id: int):
     except sqlite3.Error as e:
         logger.exception(f"Budget error: {e}")
         if update.message:
-            await update.message.reply_text("❌ Byudjetni ko'rishda xatolik.")
+            await update.message.reply_text(get_message("budget_error", user_id))
 
 async def export_data(update: Update, user_id: int):
     """Export user data"""
@@ -577,7 +578,7 @@ async def export_data(update: Update, user_id: int):
     except sqlite3.Error as e:
         logger.exception(f"Export error: {e}")
         if update.message:
-            await update.message.reply_text("❌ Export qilishda xatolik.")
+            await update.message.reply_text(get_message("export_error", user_id))
 
 async def show_records(update: Update, user_id: int):
     """Show user records"""
@@ -650,7 +651,7 @@ async def show_records(update: Update, user_id: int):
     except sqlite3.Error as e:
         logger.exception(f"Records error: {e}")
         if update.message:
-            await update.message.reply_text("❌ Rekordlarni ko'rishda xatolik.")
+            await update.message.reply_text(get_message("records_error", user_id))
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Cancel current operation and return to main menu with navigation"""

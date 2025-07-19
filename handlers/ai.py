@@ -692,7 +692,7 @@ async def handle_ai_menu(update, context):
     elif text == "📈 AI Investitsiya Maslahati":
         await show_investment_advice(update, context)
     else:
-        await update.message.reply_text("❌ Noto'g'ri tanlov. Qaytadan tanlang.")
+        await update.message.reply_text(get_message("invalid_choice", user_id))
         return 100  # Return to AI menu state
     
     return 100  # Return to AI menu state for other selections 

@@ -12,6 +12,7 @@ from utils import format_amount, validate_amount, get_navigation_keyboard, build
 from ai_service import ai_service
 from datetime import datetime
 from loguru import logger
+from constants import get_message
 
 # AI Goal states
 AI_GOAL_NAME, AI_GOAL_AMOUNT, AI_GOAL_DEADLINE, AI_GOAL_MONITOR = 501, 502, 503, 504
@@ -50,7 +51,7 @@ async def ai_goal_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return 1  # Goal name state
     else:
-        await update.message.reply_text("❌ Noto'g'ri tanlov. Qaytadan tanlang.")
+        await update.message.reply_text(get_message("invalid_choice", user_id))
         return ConversationHandler.END
 
 async def ai_goal_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -257,7 +258,7 @@ async def ai_goal_monitor(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
         
     else:
-        await update.message.reply_text("❌ Noto'g'ri tanlov. Qaytadan tanlang.")
+        await update.message.reply_text(get_message("invalid_choice", user_id))
         return 4  # Stay in confirmation state
 
 async def cancel_goal(update, context):

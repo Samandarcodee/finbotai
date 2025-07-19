@@ -291,12 +291,13 @@ async def complete_onboarding(update: Update, user_id: int, context: ContextType
         await update.message.reply_text("❌ Onboarding yakunlashda xatolik.")
 
 async def show_main_menu(update, context=None):
+    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
     keyboard = [
         ["💰 Kirim/Chiqim", "📊 Balans/Tahlil"],
         ["🤖 AI vositalar", "⚙️ Sozlamalar/Yordam"]
     ]
     await update.message.reply_text(
-        "Quyidagi funksiyalardan birini tanlang:",
+        get_message("main_menu_text", user_id),
         reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False)
     )
     return ConversationHandler.END
