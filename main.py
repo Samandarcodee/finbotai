@@ -212,7 +212,15 @@ async def message_handler(update, context):
 
 async def navigate_to_main_menu(update, context):
     from handlers.start import show_main_menu
-    return await show_main_menu(update, context)
+    keyboard = [
+        ["💰 Kirim/Chiqim", "📊 Balans/Tahlil"],
+        ["🤖 AI vositalar", "⚙️ Sozlamalar/Yordam"]
+    ]
+    await update.message.reply_text(
+        "Quyidagi funksiyalardan birini tanlang:",
+        reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False)
+    )
+    return ConversationHandler.END
 
 async def universal_fallback(update, context):
     if update.message and update.message.text:
