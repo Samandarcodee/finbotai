@@ -485,6 +485,9 @@ def main():
     app.add_handler(onboarding_conv_handler)
     app.add_handler(CommandHandler("history", show_history))
     app.add_handler(CommandHandler("admin_panel", admin_panel))
+    
+    # Add message handler for all text messages
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 
     # Setup schedulers
     setup_schedulers(app)

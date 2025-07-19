@@ -163,13 +163,23 @@ async def onboarding_goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
 async def show_main_menu(update):
-    """Show main menu with inline keyboard"""
-    inline_kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("Balansni ko'rish 📊", callback_data="show_balance")],
-        [InlineKeyboardButton("Tahlil qilish 📈", callback_data="show_analysis")],
-        [InlineKeyboardButton("AI maslahat olish 🤖", callback_data="show_ai_advice")]
-    ])
-    await update.message.reply_text("Quyidagi amallardan birini tanlang:", reply_markup=inline_kb)
+    """Show main menu with reply keyboard"""
+    from main import MAIN_MODULES_KEYBOARD
+    
+    welcome_text = (
+        "🎉 Tabriklaymiz! Onboarding yakunlandi!\n\n"
+        "🏠 Asosiy menyudan foydalanishingiz mumkin:\n\n"
+        "💰 <b>Kirim/Chiqim</b> - moliyaviy harakatlarni qo'shish\n"
+        "📊 <b>Balans/Tahlil</b> - moliyaviy holatni ko'rish\n"
+        "🤖 <b>AI vositalar</b> - sun'iy intellekt yordamida\n"
+        "⚙️ <b>Sozlamalar/Yordam</b> - bot sozlamalari"
+    )
+    
+    await update.message.reply_text(
+        welcome_text, 
+        reply_markup=ReplyKeyboardMarkup(MAIN_MODULES_KEYBOARD, resize_keyboard=True),
+        parse_mode="HTML"
+    )
     return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
