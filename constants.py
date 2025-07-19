@@ -133,6 +133,29 @@ SETTINGS_CURRENCY = 0
 SETTINGS_LANGUAGE = 1
 SETTINGS_DELETE = 2
 
+# Language and Currency Options
+LANGUAGE_OPTIONS = ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"]
+CURRENCY_OPTIONS = ["🇺🇿 So'm", "💵 Dollar", "💶 Euro", "🇷🇺 Rubl", "🇰🇿 Tenge", "🇰🇬 Som", "🇹🇷 Lira", "🇨🇳 Yuan", "🇯🇵 Yen"]
+
+# Language and Currency mapping
+LANGUAGE_MAP = {
+    "🇺🇿 O'zbekcha": "uz",
+    "🇷🇺 Русский": "ru", 
+    "🇺🇸 English": "en"
+}
+
+CURRENCY_MAP = {
+    "🇺🇿 So'm": "UZS",
+    "💵 Dollar": "USD",
+    "💶 Euro": "EUR",
+    "🇷🇺 Rubl": "RUB",
+    "🇰🇿 Tenge": "KZT",
+    "🇰🇬 Som": "KGS",
+    "🇹🇷 Lira": "TRY",
+    "🇨🇳 Yuan": "CNY",
+    "🇯🇵 Yen": "JPY"
+}
+
 def get_message(key, user_id=None, **kwargs):
     """Get message in user's language"""
     from utils import get_user_language

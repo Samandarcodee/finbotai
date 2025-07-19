@@ -4,7 +4,7 @@ Handles user settings logic for FinBot AI Telegram bot.
 """
 
 import sqlite3
-from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ContextTypes, ConversationHandler
 from db import get_db_connection, get_user_settings, DB_PATH
 from loguru import logger
@@ -155,19 +155,21 @@ async def settings_handler(update, context):
     
     # Handle settings options
     if text == "💰 Valyutani o'zgartirish":
-        reply_markup = build_reply_keyboard([
-            ["🇺🇿 So'm", "💵 Dollar", "💶 Euro"],
-            ["🇷🇺 Rubl", "🇰🇿 Tenge", "🇰🇬 Som"],
-            ["🇹🇷 Lira", "🇨🇳 Yuan", "🇯🇵 Yen"]
-        ], resize=True, one_time=True)
-        await update.message.reply_text("Valyutani tanlang:", reply_markup=reply_markup)
+        from constants import CURRENCY_OPTIONS
+        keyboard = [[opt] for opt in CURRENCY_OPTIONS] + [["🔙 Orqaga", "🏠 Bosh menyu"]]
+        await update.message.reply_text(
+            "Valyutani tanlang:",
+            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        )
         return SETTINGS_CURRENCY
         
     elif text == "🌐 Tilni o'zgartirish":
-        reply_markup = build_reply_keyboard([
-            ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"]
-        ], resize=True, one_time=True)
-        await update.message.reply_text("Tilni tanlang:", reply_markup=reply_markup)
+        from constants import LANGUAGE_OPTIONS
+        keyboard = [[opt] for opt in LANGUAGE_OPTIONS] + [["🔙 Orqaga", "🏠 Bosh menyu"]]
+        await update.message.reply_text(
+            "Tilni tanlang:",
+            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        )
         return SETTINGS_LANGUAGE
         
     elif text == "🔔 Bildirishnomalar":
@@ -330,7 +332,7 @@ async def create_backup(update, context):
             await update.message.reply_text("❌ Zaxira nusxasi yaratishda xatolik.")
 
 async def language_selection_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle language selection with improved error handling"""
+    """Handle language selection with optimized logic"""
     if not update.message or not update.message.text:
         return ConversationHandler.END
     
@@ -346,41 +348,33 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
     if text == "🔙 Orqaga":
         return await show_settings(update, context)
     
-    # Tilni aniqlash - to'g'ri matnlar bilan
-    language = None
-    if text == "🇺🇿 O'zbekcha":
-        language = "uz"
-    elif text == "🇷🇺 Русский":
-        language = "ru"
-    elif text == "🇺🇸 English":
-        language = "en"
+    # Import constants
+    from constants import LANGUAGE_OPTIONS, LANGUAGE_MAP
     
-    if language is None:
-        # Show language options again with better error message
-        reply_markup = build_reply_keyboard([
-            ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"],
-            ["🔙 Orqaga", "🏠 Bosh menyu"]
-        ], resize=True, one_time=True)
+    # Check if text is in valid options
+    if text not in LANGUAGE_OPTIONS:
+        # Show language options again
+        keyboard = [[opt] for opt in LANGUAGE_OPTIONS] + [["🔙 Orqaga", "🏠 Bosh menyu"]]
         await update.message.reply_text(
-            "❌ Noto'g'ri tanlov. Faqat tilni tanlang:",
-            reply_markup=reply_markup
+            "❌ Noto'g'ri tanlov. Iltimos, ro'yxatdan til tanlang:",
+            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         )
         return SETTINGS_LANGUAGE
     
-    # DB ga saqlash
+    # Get language code from mapping
+    language = LANGUAGE_MAP.get(text, "uz")
+    
+    # Save to database
     try:
         logger.info(f"Starting language change for user {user_id} to {language}")
         
         conn = get_db_connection()
         if conn is None:
             logger.error(f"Database connection failed for user {user_id}")
-            reply_markup = build_reply_keyboard([
-                ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"],
-                ["🔙 Orqaga", "🏠 Bosh menyu"]
-            ], resize=True, one_time=True)
+            keyboard = [[opt] for opt in LANGUAGE_OPTIONS] + [["🔙 Orqaga", "🏠 Bosh menyu"]]
             await update.message.reply_text(
                 "❌ Baza bilan ulanishda xatolik. Keyinroq urinib ko'ring.",
-                reply_markup=reply_markup
+                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
             )
             return SETTINGS_LANGUAGE
         
@@ -408,28 +402,24 @@ async def language_selection_handler(update: Update, context: ContextTypes.DEFAU
         conn.close()
         logger.info(f"Language change successful for user {user_id}")
         
-        # Yangi tilda xabar yuborish
-        from constants import MESSAGES
-        msg = MESSAGES[language]["language_changed"].format(language=text)
-        await update.message.reply_text(msg)
-        # Bosh menyuni yangi til bilan ko'rsatish
+        # Success message
+        await update.message.reply_text(f"✅ Til muvaffaqiyatli {text} ga o'zgartirildi.", reply_markup=ReplyKeyboardRemove())
+        
+        # Return to main menu
         from handlers.start import show_main_menu
         return await show_main_menu(update, context)
         
     except Exception as e:
         logger.exception(f"Language change error for user {user_id}: {e}")
-        reply_markup = build_reply_keyboard([
-            ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"],
-            ["🔙 Orqaga", "🏠 Bosh menyu"]
-        ], resize=True, one_time=True)
+        keyboard = [[opt] for opt in LANGUAGE_OPTIONS] + [["🔙 Orqaga", "🏠 Bosh menyu"]]
         await update.message.reply_text(
             "❌ Tilni o'zgartirishda xatolik. Qayta urinib ko'ring:",
-            reply_markup=reply_markup
+            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         )
         return SETTINGS_LANGUAGE
 
 async def currency_selection_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle currency selection"""
+    """Handle currency selection with optimized logic"""
     if not update.message or not update.message.text or not hasattr(update.message, 'from_user'):
         return ConversationHandler.END
     
@@ -438,53 +428,69 @@ async def currency_selection_handler(update: Update, context: ContextTypes.DEFAU
     if user_id is None:
         return ConversationHandler.END
     
-    currency_map = {
-        "🇺🇿 So'm": "UZS",
-        "💵 Dollar": "USD",
-        "💶 Euro": "EUR",
-        "🇷🇺 Rubl": "RUB",
-        "🇰🇿 Tenge": "KZT",
-        "🇰🇬 Som": "KGS",
-        "🇹🇷 Lira": "TRY",
-        "🇨🇳 Yuan": "CNY",
-        "🇯🇵 Yen": "JPY",
-        "🇺🇿 Сум": "UZS",
-        "💵 Доллар": "USD",
-        "💶 Евро": "EUR",
-        "🇷🇺 Рубль": "RUB",
-        "🇰🇿 Тенге": "KZT",
-        "🇰🇬 Сом": "KGS",
-        "🇹🇷 Лира": "TRY",
-        "🇨🇳 Юань": "CNY",
-        "🇯🇵 Иена": "JPY"
-    }
+    # Handle navigation commands first
+    if text in ["🏠 Bosh menyu", "/start"]:
+        from handlers.start import show_main_menu
+        return await show_main_menu(update, context)
+    if text == "🔙 Orqaga":
+        return await show_settings(update, context)
     
-    if text.lower() in ["/start", "/cancel", "🏠 Bosh menyu", "🏠 Bosh menyu"]:
-        return await start(update, context)
-    elif text in currency_map:
-        try:
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            c.execute("UPDATE user_settings SET currency = ? WHERE user_id = ?", (currency_map[text], user_id))
-            conn.commit()
-            conn.close()
-            await update.message.reply_text(MESSAGES["uz"]["currency_changed"].format(currency=text))
-            return await show_settings(update, context)
-        except sqlite3.Error as e:
-            logger.exception(f"Currency update error: {e}")
-            await update.message.reply_text("❌ Valyuta o'zgartirishda xatolik.")
-            return ConversationHandler.END
-    else:
-        # Show currency options again with better error message
-        reply_markup = build_reply_keyboard([
-            ["🇺🇿 So'm", "💵 Dollar", "💶 Euro"],
-            ["🇷🇺 Rubl", "🇰🇿 Tenge", "🇰🇬 Som"],
-            ["🇹🇷 Lira", "🇨🇳 Yuan", "🇯🇵 Yen"],
-            ["🔙 Orqaga", "🏠 Bosh menyu"]
-        ], resize=True, one_time=True)
+    # Import constants
+    from constants import CURRENCY_OPTIONS, CURRENCY_MAP
+    
+    # Check if text is in valid options
+    if text not in CURRENCY_OPTIONS:
+        # Show currency options again
+        keyboard = [[opt] for opt in CURRENCY_OPTIONS] + [["🔙 Orqaga", "🏠 Bosh menyu"]]
         await update.message.reply_text(
-            "❌ Noto'g'ri tanlov. Faqat valyutani tanlang:",
-            reply_markup=reply_markup
+            "❌ Noto'g'ri tanlov. Iltimos, ro'yxatdan valyutani tanlang:",
+            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        )
+        return SETTINGS_CURRENCY
+    
+    # Get currency code from mapping
+    currency = CURRENCY_MAP.get(text, "UZS")
+    
+    # Save to database
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            keyboard = [[opt] for opt in CURRENCY_OPTIONS] + [["🔙 Orqaga", "🏠 Bosh menyu"]]
+            await update.message.reply_text(
+                "❌ Baza bilan ulanishda xatolik. Keyinroq urinib ko'ring.",
+                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+            )
+            return SETTINGS_CURRENCY
+        
+        c = conn.cursor()
+        
+        # Check if user exists in user_settings
+        c.execute("SELECT user_id FROM user_settings WHERE user_id = ?", (user_id,))
+        user_exists = c.fetchone()
+        
+        if user_exists:
+            # Update existing user settings
+            c.execute("UPDATE user_settings SET currency = ? WHERE user_id = ?", (currency, user_id))
+        else:
+            # Create new user settings record
+            c.execute("""
+                INSERT INTO user_settings (user_id, language, currency, notifications, auto_reports) 
+                VALUES (?, 'uz', ?, 1, 0)
+            """, (user_id, currency))
+        
+        conn.commit()
+        conn.close()
+        
+        # Success message
+        await update.message.reply_text(f"✅ Valyuta muvaffaqiyatli {text} ga o'zgartirildi.", reply_markup=ReplyKeyboardRemove())
+        return await show_settings(update, context)
+        
+    except Exception as e:
+        logger.exception(f"Currency update error for user {user_id}: {e}")
+        keyboard = [[opt] for opt in CURRENCY_OPTIONS] + [["🔙 Orqaga", "🏠 Bosh menyu"]]
+        await update.message.reply_text(
+            "❌ Valyuta o'zgartirishda xatolik. Qayta urinib ko'ring:",
+            reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         )
         return SETTINGS_CURRENCY
 
