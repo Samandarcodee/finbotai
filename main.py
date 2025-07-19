@@ -171,8 +171,19 @@ async def message_handler(update, context):
         case "💰 Kirim/Chiqim":
             return await handle_kirim_chiqim_menu(update, context)
         case "📊 Balans/Tahlil":
-            # Balans/tahlil funksiyalari
-            pass
+            keyboard = [
+                ["📊 Balans", "📈 Tahlil"],
+                ["🏠 Bosh menyu"]
+            ]
+            await update.message.reply_text(
+                "Balans yoki tahlilni tanlang:",
+                reply_markup=build_reply_keyboard(keyboard, resize=True, one_time=True, add_navigation=False)
+            )
+            return
+        case "📊 Balans":
+            return await show_balance(update, context)
+        case "📈 Tahlil":
+            return await show_analysis(update, context)
         case "🤖 AI vositalar":
             return await show_ai_menu(update, context)
         case "⚙️ Sozlamalar/Yordam":
