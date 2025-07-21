@@ -21,7 +21,7 @@ except Exception:
 
 # Import all handlers and functions from modules
 from handlers.start import (
-    start, onboarding_language, onboarding_currency, onboarding_income, onboarding_goal, 
+    start, onboarding_currency, onboarding_income, onboarding_goal, 
     show_main_menu, onboarding_conv_handler
 )
 from handlers.finance import (
