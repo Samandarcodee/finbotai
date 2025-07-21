@@ -18,7 +18,6 @@ from handlers.start import start
 
 # Define constants locally to avoid circular import
 SETTINGS_CURRENCY = 9
-SETTINGS_LANGUAGE = 10
 SETTINGS_DELETE = 7
 # State constants for ConversationHandler
 SETTINGS_MENU = 5
@@ -111,13 +110,12 @@ async def show_settings(update, context):
         text = (
             f"⚙️ <b>SOZLAMALAR</b>\n\n"
             f"💰 Valyuta: {currency}\n"
-            f"🌐 Til: {language}\n"
             f"🔔 Bildirishnomalar: {notif_status}\n"
             f"📊 Avtomatik hisobotlar: {auto_status}\n\n"
             "Sozlamalarni o'zgartirish uchun tugmalardan birini bosing:"
         )
         keyboard = [
-            ["💰 Valyutani o'zgartirish", "🌐 Tilni o'zgartirish"],
+            ["💰 Valyutani o'zgartirish"],
             ["🔔 Bildirishnomalar", "📊 Avtomatik hisobotlar"],
             ["📤 Ma'lumotlarni eksport qilish", "💾 Zaxira nusxasi"],
             ["🗑️ Ma'lumotlarni o'chirish"],
@@ -162,13 +160,6 @@ async def settings_handler(update, context):
         ], resize=True, one_time=True)
         await update.message.reply_text("Valyutani tanlang:", reply_markup=reply_markup)
         return SETTINGS_CURRENCY
-        
-    elif text == "🌐 Tilni o'zgartirish":
-        reply_markup = build_reply_keyboard([
-            ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"]
-        ], resize=True, one_time=True)
-        await update.message.reply_text("Tilni tanlang:", reply_markup=reply_markup)
-        return SETTINGS_LANGUAGE
         
     elif text == "🔔 Bildirishnomalar":
         await toggle_notifications(update, context)
@@ -328,93 +319,6 @@ async def create_backup(update, context):
         logger.exception(f"Backup error: {e}")
         if update.message:
             await update.message.reply_text("❌ Zaxira nusxasi yaratishda xatolik.")
-
-async def language_selection_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message or not update.message.text:
-        return ConversationHandler.END
-    text = update.message.text.strip()
-    user_id = getattr(getattr(update.message, 'from_user', None), 'id', None)
-    if not user_id:
-        return ConversationHandler.END
-    
-    # Handle navigation commands first
-    if text in ["🏠 Bosh menyu", "/start"]:
-        from handlers.start import show_main_menu
-        return await show_main_menu(update, context)
-    if text == "🔙 Orqaga":
-        return await show_settings(update, context)
-    
-    # Tilni aniqlash
-    if "O'zbek" in text or "🇺🇿" in text:
-        language = "uz"
-    elif "Русский" in text or "🇷🇺" in text:
-        language = "ru"
-    elif "English" in text or "🇺🇸" in text:
-        language = "en"
-    else:
-        # Show language options again with better error message
-        reply_markup = build_reply_keyboard([
-            ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"],
-            ["🔙 Orqaga", "🏠 Bosh menyu"]
-        ], resize=True, one_time=True)
-        await update.message.reply_text(
-            "❌ Noto'g'ri tanlov. Faqat tilni tanlang:",
-            reply_markup=reply_markup
-        )
-        return SETTINGS_LANGUAGE
-    
-    # DB ga saqlash
-    try:
-        conn = get_db_connection()
-        if conn is None:
-            reply_markup = build_reply_keyboard([
-                ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"],
-                ["🔙 Orqaga", "🏠 Bosh menyu"]
-            ], resize=True, one_time=True)
-            await update.message.reply_text(
-                "❌ Baza bilan ulanishda xatolik. Keyinroq urinib ko'ring.",
-                reply_markup=reply_markup
-            )
-            return SETTINGS_LANGUAGE
-        
-        c = conn.cursor()
-        
-        # Check if user exists in user_settings
-        c.execute("SELECT user_id FROM user_settings WHERE user_id = ?", (user_id,))
-        user_exists = c.fetchone()
-        
-        if user_exists:
-            # Update existing user settings
-            c.execute("UPDATE user_settings SET language = ? WHERE user_id = ?", (language, user_id))
-        else:
-            # Create new user settings record
-            c.execute("""
-                INSERT INTO user_settings (user_id, language, currency, notifications, auto_reports) 
-                VALUES (?, ?, 'UZS', 1, 0)
-            """, (user_id, language))
-        
-        conn.commit()
-        conn.close()
-        
-        # Yangi tilda xabar yuborish
-        from constants import MESSAGES
-        msg = MESSAGES[language]["language_changed"].format(language=text)
-        await update.message.reply_text(msg)
-        # Bosh menyuni yangi til bilan ko'rsatish
-        from handlers.start import show_main_menu
-        return await show_main_menu(update, context)
-        
-    except Exception as e:
-        logger.exception(f"Language change error: {e}")
-        reply_markup = build_reply_keyboard([
-            ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"],
-            ["🔙 Orqaga", "🏠 Bosh menyu"]
-        ], resize=True, one_time=True)
-        await update.message.reply_text(
-            "❌ Tilni o'zgartirishda xatolik. Qayta urinib ko'ring:",
-            reply_markup=reply_markup
-        )
-        return SETTINGS_LANGUAGE
 
 async def currency_selection_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle currency selection"""
