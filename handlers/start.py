@@ -12,7 +12,7 @@ from db import init_db, get_db_connection, get_user_settings, get_currency_code,
 from loguru import logger
 from utils import get_navigation_keyboard, build_reply_keyboard
 
-ONBOARDING_LANGUAGE, ONBOARDING_CURRENCY, ONBOARDING_INCOME, ONBOARDING_GOAL = 300, 301, 302, 303
+ONBOARDING_CURRENCY, ONBOARDING_INCOME, ONBOARDING_GOAL = 301, 302, 303
 
 # MESSAGES constant
 MESSAGES = {
@@ -32,93 +32,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     user_id = getattr(user, 'id', None)
     user_name = getattr(user, 'first_name', 'Foydalanuvchi')
-    
     try:
-        # Check if user is new (onboarding needed)
-        if not is_onboarded(user_id):
-            # Onboarding: til tanlash bilan boshlanadi
-            from constants import get_message
-            welcome_text = get_message("welcome", user_id, name=user_name)
-            language_kb = build_reply_keyboard([
-                ["🇺🇿 O'zbekcha", "🇷🇺 Русский", "🇺🇸 English"]
-            ], resize=True, one_time=True, add_navigation=False)
-            await update.message.reply_text(welcome_text, reply_markup=language_kb, parse_mode="HTML")
-            return ONBOARDING_LANGUAGE
-        # Agar onboardingdan o'tgan bo'lsa, asosiy menyu
+        # Onboarding: til tanlash bosqichi olib tashlandi, doim uzbek
+        from constants import get_message
+        welcome_text = get_message("welcome", user_id, name=user_name)
+        await update.message.reply_text(welcome_text, parse_mode="HTML")
+        # To'g'ridan-to'g'ri keyingi bosqichga o'tamiz (valyuta tanlash yoki asosiy menyu)
         return await show_main_menu(update)
     except Exception as e:
         logger.exception(f"Error in start: {e}")
         from constants import get_message
         await update.message.reply_text(get_message("error_general", user_id))
-        return ConversationHandler.END
-
-async def onboarding_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle language selection during onboarding"""
-    if not update.message or not update.message.text:
-        logger.error("No message or text in onboarding_language")
-        return ConversationHandler.END
-    
-    text = update.message.text
-    user_id = getattr(update.message.from_user, 'id', None)
-    
-    logger.info(f"onboarding_language called with text: {text}, user_id: {user_id}")
-    
-    if user_id is None:
-        await update.message.reply_text("❌ Foydalanuvchi ma'lumotlari topilmadi.")
-        return ConversationHandler.END
-    
-    # Determine language code
-    if "🇺🇿" in text or "o'zbek" in text.lower():
-        language = "uz"
-    elif "🇷🇺" in text or "рус" in text.lower():
-        language = "ru"
-    elif "🇺🇸" in text or "english" in text.lower():
-        language = "en"
-    else:
-        language = "uz"  # Default to Uzbek
-    
-    logger.info(f"Selected language: {language}")
-    
-    try:
-        # Save language to DB
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        
-        # Check if user exists in user_settings
-        c.execute("SELECT user_id FROM user_settings WHERE user_id = ?", (user_id,))
-        exists = c.fetchone()
-        
-        if exists:
-            # Update existing user
-            c.execute("UPDATE user_settings SET language = ? WHERE user_id = ?", (language, user_id))
-            logger.info(f"Updated user {user_id} with language {language}")
-        else:
-            # Insert new user
-            c.execute("INSERT INTO user_settings (user_id, language, onboarding_done) VALUES (?, ?, 0)", (user_id, language))
-            logger.info(f"Inserted new user {user_id} with language {language}")
-        
-        conn.commit()
-        conn.close()
-        
-        # Save language to context for next steps
-        context.user_data['language'] = language
-        
-        logger.info(f"Sending currency selection message to user {user_id}")
-        from constants import get_message
-        currency_text = get_message("currency_select", user_id)
-        await update.message.reply_text(
-            currency_text,
-            reply_markup=build_reply_keyboard([
-                ["🇺🇿 So'm", "💵 Dollar", "💶 Euro"],
-                ["🇷🇺 Rubl", "🇰🇿 Tenge", "🇰🇬 Som"],
-                ["🇹🇷 Lira", "🇨🇳 Yuan", "🇯🇵 Yen"]
-            ], resize=True, one_time=True, add_navigation=False)
-        )
-        logger.info(f"Returning ONBOARDING_CURRENCY state: {ONBOARDING_CURRENCY}")
-        return ONBOARDING_CURRENCY
-    except sqlite3.Error as e:
-        logger.exception(f"Database error in onboarding_language: {e}")
-        await update.message.reply_text("❌ Xatolik yuz berdi. Qaytadan urinib ko'ring.")
         return ConversationHandler.END
 
 async def onboarding_currency(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -314,7 +238,6 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 onboarding_conv_handler = ConversationHandler(
     entry_points=[CommandHandler("start", start)],
     states={
-        ONBOARDING_LANGUAGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, onboarding_language)],
         ONBOARDING_CURRENCY: [MessageHandler(filters.TEXT & ~filters.COMMAND, onboarding_currency)],
         ONBOARDING_INCOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, onboarding_income)],
         ONBOARDING_GOAL: [MessageHandler(filters.TEXT & ~filters.COMMAND, onboarding_goal)],
